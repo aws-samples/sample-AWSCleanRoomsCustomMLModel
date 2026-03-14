@@ -1,0 +1,28 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+version: 0.2
+
+# ACCOUNT_ID, REGION, and SAGEMAKER_REGISTRY are passed as environment
+# variables by codebuild_containers.py (read from config.py).
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to ECR...
+      - aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+      - echo Logging in to SageMaker ECR registry...
+      - aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $SAGEMAKER_REGISTRY.dkr.ecr.$REGION.amazonaws.com
+  build:
+    commands:
+      - echo Building training container...
+      - docker build --build-arg AWS_REGION=$REGION --build-arg SAGEMAKER_REGISTRY=$SAGEMAKER_REGISTRY -t $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/cleanrooms-ml-demo-training:latest containers/training/
+      - echo Building inference container...
+      - docker build --build-arg AWS_REGION=$REGION --build-arg SAGEMAKER_REGISTRY=$SAGEMAKER_REGISTRY -t $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/cleanrooms-ml-demo-inference:latest containers/inference/
+  post_build:
+    commands:
+      - echo Pushing training container...
+      - docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/cleanrooms-ml-demo-training:latest
+      - echo Pushing inference container...
+      - docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/cleanrooms-ml-demo-inference:latest
+      - echo Done.

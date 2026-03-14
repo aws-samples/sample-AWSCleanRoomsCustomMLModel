@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated data (users regenerate via script)
+data/*.csv
+
+# Local test artifacts
+local_test/model/
+local_test/output/
+
+# Build artifacts
+scripts/sourcedir.tar.gz
+scripts/training_job.json
+scripts/trust-policy.json
+
+# Scan reports (local records)
+git-secrets-scan-report.txt
+repolinter-report.md
+
+# Kiro
+.kiro/

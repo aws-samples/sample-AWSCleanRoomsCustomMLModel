@@ -111,6 +111,38 @@ def setup_glue():
         except glue.exceptions.AlreadyExistsException:
             log(f"Table already exists: {tbl_name}")
 
+    # Grant Lake Formation permissions to data provider role.
+    # Required in accounts where Lake Formation is active (e.g., DataZone enabled).
+    # In pure-IAM accounts these grants succeed harmlessly or fail silently.
+    lf = session.client("lakeformation")
+    role_arn = f"arn:aws:iam::{AWS_ACCOUNT_ID}:role/{ROLE_DATA_PROVIDER}"
+    try:
+        lf.grant_permissions(
+            Principal={"DataLakePrincipalIdentifier": role_arn},
+            Resource={"Database": {"Name": GLUE_DB}},
+            Permissions=["DESCRIBE"],
+        )
+        log(f"Granted Lake Formation DESCRIBE on database {GLUE_DB}")
+    except Exception as e:
+        if "already" in str(e).lower():
+            log("Lake Formation database permission already exists")
+        else:
+            log(f"Lake Formation database grant (non-fatal): {e}")
+
+    for tbl_name in [ADVERTISER_TABLE, RETAILER_TABLE]:
+        try:
+            lf.grant_permissions(
+                Principal={"DataLakePrincipalIdentifier": role_arn},
+                Resource={"Table": {"DatabaseName": GLUE_DB, "Name": tbl_name}},
+                Permissions=["SELECT", "DESCRIBE"],
+            )
+            log(f"Granted Lake Formation SELECT+DESCRIBE on {tbl_name}")
+        except Exception as e:
+            if "already" in str(e).lower():
+                log(f"Lake Formation permission already exists for {tbl_name}")
+            else:
+                log(f"Lake Formation table grant (non-fatal): {e}")
+
 
 # ═══ 2. IAM ROLES ═══
 def setup_iam_roles():

@@ -161,7 +161,7 @@ When running locally or via SageMaker (two separate CSVs with headers), the trai
 
 After successful inference, Clean Rooms ML writes the output to the configured S3 bucket. The output contains a propensity score and binary prediction for each record in the pre-joined dataset.
 
-**Output S3 path:** `s3://cleanrooms-ml-output-<ACCOUNT_ID>/cleanrooms-ml-output/`
+**Output S3 path:** `s3://cleanrooms-ml-output-<ACCOUNT_ID>-<RUN_ID>/cleanrooms-ml-output/`
 
 ### Output Format
 
@@ -224,6 +224,8 @@ AWS_REGION     = "eu-north-1"     # Your preferred region
 
 All scripts read from this single file — no other hardcoded values to change.
 
+A unique run ID is auto-generated on first script execution and saved to `.run_id`. This suffix is appended to bucket names (e.g. `cleanrooms-ml-demo-123456789012-202603141530`) to avoid collisions with previous runs. Delete `.run_id` to start a fresh run with new buckets.
+
 ### Step 1: Generate Synthetic Data
 
 **Script:** `data/generate_synthetic_data.py`
@@ -242,10 +244,10 @@ python data/generate_synthetic_data.py
 
 ### Step 2: Upload Data to S3
 
-**Script:** `scripts/upload_data.ps1`
+**Script:** `scripts/upload_data.py`
 
-```powershell
-.\scripts\upload_data.ps1
+```bash
+python scripts/upload_data.py
 ```
 
 - Creates the source S3 bucket: `cleanrooms-ml-demo-<ACCOUNT_ID>`
@@ -256,7 +258,7 @@ python data/generate_synthetic_data.py
 
 ### Step 3: Build & Push Docker Containers
 
-**Scripts:** `scripts/codebuild_containers.py` + `buildspec.yml`
+**Scripts:** `scripts/codebuild_containers.py` + `buildspec.yml` (or `scripts/build_and_push.py` for local Docker)
 
 **Option A — via CodeBuild (no local Docker needed):**
 ```bash
@@ -264,8 +266,8 @@ python scripts/codebuild_containers.py
 ```
 
 **Option B — via local Docker:**
-```powershell
-.\scripts\build_and_push.ps1
+```bash
+python scripts/build_and_push.py
 ```
 
 - Creates ECR repositories for training and inference images
@@ -329,7 +331,7 @@ This orchestrates the full ML pipeline:
 Download the inference output from S3 and review the propensity scores:
 
 ```bash
-aws s3 cp s3://cleanrooms-ml-output-<ACCOUNT_ID>/cleanrooms-ml-output/ ./results/ --recursive --region <REGION>
+aws s3 cp s3://cleanrooms-ml-output-<ACCOUNT_ID>-<RUN_ID>/cleanrooms-ml-output/ ./results/ --recursive --region <REGION>
 ```
 
 Each record gets a `propensity_score` (0–1) and a `predicted_converter` (0/1) flag.
@@ -340,8 +342,8 @@ Each record gets a `propensity_score` (0–1) and a `predicted_converter` (0/1) 
 
 You can test the training pipeline locally without any AWS resources:
 
-```powershell
-.\scripts\test_training_local.ps1
+```bash
+python scripts/test_training_local.py
 ```
 
 This simulates the SageMaker directory structure locally and runs `train.py` directly.
@@ -350,16 +352,16 @@ This simulates the SageMaker directory structure locally and runs `train.py` dir
 
 To run training via SageMaker directly (outside Clean Rooms):
 
-```powershell
-.\scripts\sagemaker_training_job.ps1
+```bash
+python scripts/sagemaker_training_job.py
 ```
 
 ---
 
 ## Architecture Notes
 
-- **Source data bucket:** `s3://cleanrooms-ml-demo-<ACCOUNT_ID>` (advertiser + retailer CSVs)
-- **Output bucket:** `s3://cleanrooms-ml-output-<ACCOUNT_ID>` (inference results) — must be separate from source
+- **Source data bucket:** `s3://cleanrooms-ml-demo-<ACCOUNT_ID>-<RUN_ID>` (advertiser + retailer CSVs)
+- **Output bucket:** `s3://cleanrooms-ml-output-<ACCOUNT_ID>-<RUN_ID>` (inference results) — must be separate from source
 - **IAM roles:** All prefixed with `cleanrooms-ml-demo-` for easy identification
 - Clean Rooms joins data on `user_id` and sends headerless CSV to containers (join column excluded)
 - Inference container MUST use the SageMaker PyTorch base image — generic Python images cause `AlgorithmError`
@@ -382,13 +384,13 @@ containers/
     serve.py                      ← HTTP server (/ping + /invocations)
     inference_handler.py          ← Model loading + prediction logic
 scripts/
-  upload_data.ps1                 ← Upload CSVs to S3 + create buckets
+  upload_data.py                  ← Upload CSVs to S3 + create buckets
   codebuild_containers.py         ← Build containers via CodeBuild (no local Docker)
-  build_and_push.ps1              ← Build containers via local Docker
+  build_and_push.py               ← Build containers via local Docker
   setup_cleanrooms.py             ← Create Glue, IAM, collaboration, ML config
   run_cleanrooms_ml.py            ← Create channels, train model, run inference
-  test_training_local.ps1         ← Test training locally (no AWS needed)
-  sagemaker_training_job.ps1      ← Optional: run training via SageMaker directly
+  test_training_local.py          ← Test training locally (no AWS needed)
+  sagemaker_training_job.py       ← Optional: run training via SageMaker directly
 ```
 
 

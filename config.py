@@ -15,12 +15,33 @@
 """
 
 # ─── REQUIRED: Set these to your values ───────────────────
-AWS_ACCOUNT_ID = "CHANGE_ME"       # e.g. "123456789012"
-AWS_REGION     = "CHANGE_ME"       # e.g. "eu-north-1", "us-east-1"
+AWS_ACCOUNT_ID = "123456789012"     # e.g. "123456789012"
+AWS_REGION     = "us-east-1"       # e.g. "eu-north-1", "us-east-1"
+
+# ─── RUN ID (auto-generated, ensures unique bucket names) ─
+import os as _os
+from datetime import datetime as _dt
+
+_RUN_ID_FILE = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".run_id")
+
+def _get_or_create_run_id():
+    """Return a short unique suffix for bucket names.
+
+    Generated once and persisted to .run_id so every script in the same
+    demo run shares the same buckets.  Delete .run_id to start fresh.
+    """
+    if _os.path.exists(_RUN_ID_FILE):
+        return open(_RUN_ID_FILE).read().strip()
+    run_id = _dt.utcnow().strftime("%Y%m%d%H%M")
+    with open(_RUN_ID_FILE, "w") as f:
+        f.write(run_id)
+    return run_id
+
+RUN_ID = _get_or_create_run_id()
 
 # ─── DERIVED (no need to change) ──────────────────────────
-BUCKET         = f"cleanrooms-ml-demo-{AWS_ACCOUNT_ID}"
-OUTPUT_BUCKET  = f"cleanrooms-ml-output-{AWS_ACCOUNT_ID}"
+BUCKET         = f"cleanrooms-ml-demo-{AWS_ACCOUNT_ID}-{RUN_ID}"
+OUTPUT_BUCKET  = f"cleanrooms-ml-output-{AWS_ACCOUNT_ID}-{RUN_ID}"
 PREFIX         = "cleanrooms-ml-demo"
 
 # ECR image URIs

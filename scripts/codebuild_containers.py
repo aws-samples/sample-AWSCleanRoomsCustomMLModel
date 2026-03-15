@@ -48,15 +48,34 @@ def create_codebuild_role():
     iam.put_role_policy(RoleName=CB_ROLE_NAME, PolicyName=f"{PROJECT_NAME}-policy", PolicyDocument=json.dumps({
         "Version": "2012-10-17",
         "Statement": [
-            {"Effect": "Allow", "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+            {"Sid": "CloudWatchLogs",
+             "Effect": "Allow", "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
              "Resource": f"arn:aws:logs:{AWS_REGION}:{AWS_ACCOUNT_ID}:log-group:/aws/codebuild/*"},
-            {"Effect": "Allow", "Action": ["s3:GetObject", "s3:GetBucketLocation"],
-             "Resource": [f"arn:aws:s3:::{BUCKET}", f"arn:aws:s3:::{BUCKET}/*"]},
-            {"Effect": "Allow", "Action": [
-                "ecr:GetAuthorizationToken", "ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer",
+            {"Sid": "S3SourceAccess",
+             "Effect": "Allow", "Action": ["s3:GetObject", "s3:GetBucketLocation"],
+             "Resource": [f"arn:aws:s3:::{BUCKET}", f"arn:aws:s3:::{BUCKET}/codebuild/*"]},
+            {"Sid": "ECRAuthToken",
+             "Effect": "Allow",
+             # ecr:GetAuthorizationToken does not support resource-level permissions
+             "Action": ["ecr:GetAuthorizationToken"],
+             "Resource": "*"},
+            {"Sid": "ECRPushPull",
+             "Effect": "Allow",
+             "Action": [
+                "ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer",
                 "ecr:BatchGetImage", "ecr:PutImage", "ecr:InitiateLayerUpload",
                 "ecr:UploadLayerPart", "ecr:CompleteLayerUpload"],
-             "Resource": "*"},
+             "Resource": [
+                f"arn:aws:ecr:{AWS_REGION}:{AWS_ACCOUNT_ID}:repository/cleanrooms-ml-demo-training",
+                f"arn:aws:ecr:{AWS_REGION}:{AWS_ACCOUNT_ID}:repository/cleanrooms-ml-demo-inference"]},
+            {"Sid": "ECRPullSageMakerDLC",
+             "Effect": "Allow",
+             "Action": [
+                "ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage"],
+             "Resource": [
+                f"arn:aws:ecr:{AWS_REGION}:{SAGEMAKER_REGISTRY}:repository/pytorch-training",
+                f"arn:aws:ecr:{AWS_REGION}:{SAGEMAKER_REGISTRY}:repository/pytorch-inference"]},
         ],
     }))
     time.sleep(10)

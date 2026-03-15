@@ -10,7 +10,7 @@ Self-contained, reusable demo for **Customer Propensity Scoring** using AWS Clea
 
 **Scenario:** An advertiser and a retailer want to collaborate on predicting which customers are most likely to convert (make a purchase) based on combined ad engagement and purchase behavior data. Neither party wants to share their raw data with the other.
 
-**Solution:** AWS Clean Rooms ML enables both parties to contribute their data to a secure collaboration. Clean Rooms joins the datasets on a shared key (`user_id`), trains a propensity model on the combined features, and runs inference — all without either party seeing the other's raw data.
+**Solution:** AWS Clean Rooms ML enables both parties to contribute their data to a secure collaboration. AWS Clean Rooms joins the datasets on a shared key (`user_id`), trains a propensity model on the combined features, and runs inference — all without either party seeing the other's raw data.
 
 **Business Value:** The advertiser can identify high-propensity users to target with ad campaigns, while the retailer gains insight into which ad-exposed customers are most likely to purchase — enabling better ad spend allocation and personalized marketing.
 
@@ -88,9 +88,9 @@ The synthetic data embeds a learnable signal: shared users (who appear in both d
 
 ## Feature Engineering
 
-**Clean Rooms Mode:** When Clean Rooms ML runs training, it joins the two tables on `user_id` and sends a single pre-joined, headerless CSV to the training container. The `user_id` column is excluded (it's the join key). The training script detects this format and applies column names automatically.
+**AWS Clean Rooms Mode:** When AWS Clean Rooms ML runs training, it joins the two tables on `user_id` and sends a single pre-joined, headerless CSV to the training container. The `user_id` column is excluded (it's the join key). The training script detects this format and applies column names automatically.
 
-### Features Used (Clean Rooms Mode)
+### Features Used (AWS Clean Rooms Mode)
 
 | Feature | Source | Description |
 |---------|--------|-------------|
@@ -106,9 +106,9 @@ The synthetic data embeds a learnable signal: shared users (who appear in both d
 
 **Target variable:** `converted` (1 = purchased, 0 = did not purchase)
 
-### Features Used (Local/SageMaker Mode)
+### Features Used (Local/Amazon SageMaker AI Mode)
 
-When running locally or via SageMaker (two separate CSVs with headers), the training script aggregates per-user before joining. Additional aggregated features include:
+When running locally or via Amazon SageMaker AI (two separate CSVs with headers), the training script aggregates per-user before joining. Additional aggregated features include:
 
 - `num_campaigns` — number of distinct campaigns the user engaged with
 - `num_devices` — number of distinct device types used
@@ -132,9 +132,9 @@ When running locally or via SageMaker (two separate CSVs with headers), the trai
 | learning_rate | 0.1 |
 | Random seed | 42 |
 
-### Training Flow in Clean Rooms ML
+### Training Flow in AWS Clean Rooms ML
 
-1. Clean Rooms joins advertiser and retailer tables on `user_id` inside the collaboration
+1. AWS Clean Rooms joins advertiser and retailer tables on `user_id` inside the collaboration
 2. The pre-joined data (headerless CSV, no `user_id` column) is sent to the training container
 3. The training script detects the headerless format and applies column names
 4. Derived features (`click_through_rate`, `time_per_click`) are computed
@@ -142,9 +142,9 @@ When running locally or via SageMaker (two separate CSVs with headers), the trai
 6. Model artifacts (`model.joblib`, `feature_columns.json`) are saved to `/opt/ml/model`
 7. Metrics (accuracy, precision, recall, F1, ROC-AUC) are saved to `/opt/ml/output/data`
 
-### Inference Flow in Clean Rooms ML
+### Inference Flow in AWS Clean Rooms ML
 
-1. Clean Rooms sends the same pre-joined data to the inference container
+1. AWS Clean Rooms sends the same pre-joined data to the inference container
 2. The inference handler loads the trained model and feature column list
 3. Derived features are computed on the fly (same as training)
 4. Model predicts `propensity_score` (0–1) and `predicted_converter` (0/1) for each record
@@ -152,14 +152,14 @@ When running locally or via SageMaker (two separate CSVs with headers), the trai
 
 ### Container Requirements
 
-- **Training container:** Any Python image with sklearn, pandas, numpy, joblib (we used `python:3.11-slim` as base, wrapped in the SageMaker PyTorch training image)
-- **Inference container:** Must use the SageMaker PyTorch inference base image: `pytorch-inference:2.3.0-cpu-py311-ubuntu20.04-sagemaker`. Clean Rooms ML requires this specific base image for inference — using a generic Python image causes `AlgorithmError` failures.
+- **Training container:** Any Python image with sklearn, pandas, numpy, joblib (we used `python:3.11-slim` as base, wrapped in the Amazon SageMaker AI PyTorch training image)
+- **Inference container:** Must use the Amazon SageMaker AI PyTorch inference base image: `pytorch-inference:2.3.0-cpu-py311-ubuntu20.04-sagemaker`. AWS Clean Rooms ML requires this specific base image for inference — using a generic Python image causes `AlgorithmError` failures.
 
 ---
 
 ## Results
 
-After successful inference, Clean Rooms ML writes the output to the configured S3 bucket. The output contains a propensity score and binary prediction for each record in the pre-joined dataset.
+After successful inference, AWS Clean Rooms ML writes the output to the configured S3 bucket. The output contains a propensity score and binary prediction for each record in the pre-joined dataset.
 
 **Output S3 path:** `s3://cleanrooms-ml-output-<ACCOUNT_ID>-<RUN_ID>/cleanrooms-ml-output/`
 
@@ -211,7 +211,7 @@ The model is evaluated on a held-out 20% test set during training. Typical metri
 
 - Python 3.10+ with `boto3`, `pandas`, `scikit-learn`, `joblib` installed
 - AWS CLI configured with valid credentials
-- AWS account with Clean Rooms ML access enabled
+- AWS account with AWS Clean Rooms ML access enabled
 
 ### Step 0: Configure Your Account
 
@@ -251,7 +251,7 @@ python scripts/upload_data.py
 ```
 
 - Creates the source S3 bucket: `cleanrooms-ml-demo-<ACCOUNT_ID>`
-- Creates the output S3 bucket: `cleanrooms-ml-output-<ACCOUNT_ID>` (must be separate from source — Clean Rooms doesn't allow query results in the same bucket as source data)
+- Creates the output S3 bucket: `cleanrooms-ml-output-<ACCOUNT_ID>` (must be separate from source — AWS Clean Rooms doesn't allow query results in the same bucket as source data)
 - Uploads both CSVs with appropriate prefixes (`advertiser/`, `retailer/`, `data/`)
 
 **Key resources created:** Two S3 buckets with uploaded data
@@ -271,15 +271,15 @@ python scripts/build_and_push.py
 ```
 
 - Creates ECR repositories for training and inference images
-- **Training container** (`containers/training/`): SageMaker PyTorch training base image with sklearn, pandas, numpy, joblib
-- **Inference container** (`containers/inference/`): SageMaker PyTorch inference base image (`pytorch-inference:2.3.0-cpu-py311-ubuntu20.04-sagemaker`) — this specific base image is required by Clean Rooms ML
+- **Training container** (`containers/training/`): Amazon SageMaker AI PyTorch training base image with sklearn, pandas, numpy, joblib
+- **Inference container** (`containers/inference/`): Amazon SageMaker AI PyTorch inference base image (`pytorch-inference:2.3.0-cpu-py311-ubuntu20.04-sagemaker`) — this specific base image is required by AWS Clean Rooms ML
 - Both images are pushed to ECR in your configured region
 - The `buildspec.yml` defines the multi-container build and passes `ACCOUNT_ID`, `REGION`, and `SAGEMAKER_REGISTRY` as build-time variables
 - Dockerfiles use `ARG` to parameterize the base image registry URL
 
 **Output artifacts:** ECR repositories with training and inference container images
 
-### Step 4: Set Up Clean Rooms Infrastructure
+### Step 4: Set Up AWS Clean Rooms Infrastructure
 
 **Script:** `scripts/setup_cleanrooms.py`
 
@@ -287,14 +287,14 @@ python scripts/build_and_push.py
 python scripts/setup_cleanrooms.py
 ```
 
-This creates the full Clean Rooms collaboration infrastructure:
+This creates the full AWS Clean Rooms collaboration infrastructure:
 
-1. **Glue Data Catalog** — database + tables for advertiser and retailer data pointing to S3
+1. **AWS Glue Data Catalog** — database + tables for advertiser and retailer data pointing to S3
 2. **IAM Roles:**
-   - `data-provider-role` — allows Clean Rooms to read Glue catalog and S3 data
-   - `model-provider-role` — allows Clean Rooms ML to pull ECR container images
-   - `ml-config-role` — allows Clean Rooms ML to write metrics, logs, and S3 output (needs access to both buckets + CloudWatch)
-   - `query-runner-role` — allows Clean Rooms ML to execute protected queries
+   - `data-provider-role` — allows AWS Clean Rooms to read AWS Glue catalog and S3 data
+   - `model-provider-role` — allows AWS Clean Rooms ML to pull ECR container images
+   - `ml-config-role` — allows AWS Clean Rooms ML to write metrics, logs, and S3 output (needs access to both buckets + Amazon CloudWatch)
+   - `query-runner-role` — allows AWS Clean Rooms ML to execute protected queries
 3. **Collaboration** — with ML modeling enabled (training + inference)
 4. **Membership** — creator membership with query and ML payment responsibilities
 5. **Configured Tables** — for `advertiser_engagement` and `retailer_purchases` with LIST analysis rules and `additionalAnalyses: ALLOWED`
@@ -319,9 +319,9 @@ This orchestrates the full ML pipeline:
 2. **Waits for training channel** to become ACTIVE
 3. **Creates inference ML input channel** — same join query for inference data
 4. **Waits for inference channel** to become ACTIVE
-5. **Creates trained model** — Clean Rooms sends the pre-joined data to the training container, which trains a GradientBoosting classifier
+5. **Creates trained model** — AWS Clean Rooms sends the pre-joined data to the training container, which trains a GradientBoosting classifier
 6. **Waits for training** to complete and model to become ACTIVE
-7. **Starts inference job** — Clean Rooms sends pre-joined data to the inference container, which outputs propensity scores
+7. **Starts inference job** — AWS Clean Rooms sends pre-joined data to the inference container, which outputs propensity scores
 8. **Waits for inference** to complete
 
 **Output artifacts:** Trained model (ACTIVE), inference results CSV at `s3://cleanrooms-ml-output-<ACCOUNT_ID>/cleanrooms-ml-output/`
@@ -348,9 +348,9 @@ python scripts/test_training_local.py
 
 This simulates the SageMaker directory structure locally and runs `train.py` directly.
 
-## Optional: SageMaker Direct Training
+## Optional: Amazon SageMaker AI Direct Training
 
-To run training via SageMaker directly (outside Clean Rooms):
+To run training via Amazon SageMaker AI directly (outside AWS Clean Rooms):
 
 ```bash
 python scripts/sagemaker_training_job.py
@@ -363,8 +363,8 @@ python scripts/sagemaker_training_job.py
 - **Source data bucket:** `s3://cleanrooms-ml-demo-<ACCOUNT_ID>-<RUN_ID>` (advertiser + retailer CSVs)
 - **Output bucket:** `s3://cleanrooms-ml-output-<ACCOUNT_ID>-<RUN_ID>` (inference results) — must be separate from source
 - **IAM roles:** All prefixed with `cleanrooms-ml-demo-` for easy identification
-- Clean Rooms joins data on `user_id` and sends headerless CSV to containers (join column excluded)
-- Inference container MUST use the SageMaker PyTorch base image — generic Python images cause `AlgorithmError`
+- AWS Clean Rooms joins data on `user_id` and sends headerless CSV to containers (join column excluded)
+- Inference container MUST use the Amazon SageMaker AI PyTorch base image — generic Python images cause `AlgorithmError`
 - All account-specific values are derived from `config.py` — no hardcoded IDs anywhere
 
 ## Project Structure
@@ -393,6 +393,95 @@ scripts/
   sagemaker_training_job.py       ← Optional: run training via SageMaker directly
 ```
 
+
+## Architecture Diagram
+
+```mermaid
+flowchart TB
+    subgraph S3_Source["Amazon S3 — Source Data"]
+        A["Advertiser Engagement CSV"]
+        B["Retailer Purchases CSV"]
+    end
+
+    subgraph Glue["AWS Glue Data Catalog"]
+        GA["advertiser_engagement"]
+        GB["retailer_purchases"]
+    end
+
+    subgraph ECR["Amazon ECR — Container Images"]
+        TI["Training Image\n(GradientBoosting + sklearn)"]
+        TI ~~~ II
+        II["Inference Image\n(SageMaker AI PyTorch base)"]
+    end
+
+    subgraph CR["AWS Clean Rooms — Collaboration"]
+        CT["Configured Tables\n+ Analysis Rules"]
+        CRML["AWS Clean Rooms ML"]
+        TJ["Training Job"]
+        IJ["Inference Job"]
+
+        CT -->|"JOIN on user_id"| CRML
+        CRML --> TJ
+        CRML --> IJ
+        TJ -->|"model.joblib"| IJ
+    end
+
+    subgraph S3_Output["Amazon S3 — Results"]
+        OUT["propensity_score\npredicted_converter"]
+    end
+
+    A --> GA
+    B --> GB
+    GA --> CT
+    GB --> CT
+    TI -.->|"pulled by"| TJ
+    II -.->|"pulled by"| IJ
+    IJ --> OUT
+```
+
+## Security Considerations
+
+This demo implements the following security controls. See [SECURITY.md](SECURITY.md) for the full threat model and review checklist.
+
+- **IAM least-privilege** — All roles use scoped inline policies (no `*FullAccess` managed policies). S3 actions are restricted to specific bucket ARNs and prefixes. AWS Glue actions are scoped to the demo database and tables.
+- **S3 hardening** — Block Public Access enabled, SSE-S3 encryption by default, versioning enabled, TLS-only bucket policy (`aws:SecureTransport`).
+- **Container input validation** — Inference container enforces a 50 MB payload size limit and validates the input schema. Training container wraps data parsing in error handling.
+- **No hardcoded credentials** — `config.py` reads `AWS_ACCOUNT_ID` and `AWS_REGION` from environment variables with fallback defaults.
+- **Subprocess safety** — All subprocess calls use `shell=False` with argument lists.
+- **Shared Responsibility Model** — AWS is responsible for the security of the cloud infrastructure. You are responsible for configuring IAM, encryption, and access controls in your account. See the [AWS Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/).
+
+## Data Classification
+
+| Property | Value |
+|----------|-------|
+| Data type | 100% synthetic (algorithmically generated) |
+| Contains real PII | No |
+| Contains real customer data | No |
+| Data sensitivity | Non-sensitive / public-safe |
+| Generation method | Python `random` module with seed 42 |
+| Source script | `data/generate_synthetic_data.py` |
+
+All `user_id` values (e.g., `user_000000`) are synthetic identifiers with no connection to real individuals. The CSV files can be safely distributed and do not require encryption at rest for compliance purposes, though SSE-S3 is enabled by default as defense-in-depth.
+
+See `data/README.md` for additional data provenance details.
+
+## Bias and Fairness Considerations
+
+This demo uses synthetic data with an intentionally embedded propensity signal for demonstration purposes. The following considerations apply if adapting this approach for production use:
+
+- **Training data bias** — The synthetic data generator assigns higher base propensity to shared users (mean 0.58) vs. non-shared users (mean 0.32). In a real scenario, this correlation structure should be validated against actual population distributions to avoid systematic bias.
+- **Feature selection** — The model uses behavioral features (clicks, impressions, purchase amounts) that may correlate with demographic attributes not present in the data. Evaluate whether proxy discrimination could arise from the chosen feature set.
+- **Threshold selection** — The default classification threshold of 0.50 may produce different false-positive/false-negative rates across subpopulations. Consider calibrating the threshold based on fairness metrics (e.g., equalized odds, demographic parity) relevant to your use case.
+- **Model monitoring** — In production, monitor model predictions over time for drift in score distributions across user segments.
+- **Clean Rooms privacy** — AWS Clean Rooms prevents either party from seeing the other's raw data, which limits the ability to audit for bias across the full feature set. Establish governance processes for joint bias review.
+
+## Data Governance
+
+- **Data provenance** — Both datasets are generated by `data/generate_synthetic_data.py` using deterministic random generation (seed 42). No external data sources are used.
+- **Data retention** — ML input channels are configured with a 30-day retention period (`retentionInDays=30`). S3 bucket versioning is enabled for audit trail purposes.
+- **Data access** — Access to source and output S3 buckets is controlled via scoped IAM policies. Only the designated Clean Rooms roles can read source data or write inference results.
+- **Data lineage** — The training pipeline is fully reproducible: synthetic data generation → S3 upload → AWS Glue catalog → AWS Clean Rooms join → container training → inference output.
+- **Compliance** — This demo does not process regulated data (PII, PHI, PCI). If adapting for regulated workloads, ensure compliance with applicable frameworks (GDPR, HIPAA, etc.) and enable additional controls such as AWS CloudTrail logging, Amazon Macie for S3 data classification, and VPC endpoints for private connectivity.
 
 ---
 

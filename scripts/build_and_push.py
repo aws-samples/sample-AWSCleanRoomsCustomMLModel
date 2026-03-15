@@ -27,9 +27,10 @@ def log(msg):
     print(f"  → {msg}")
 
 
-def run(cmd, **kwargs):
-    print(f"  $ {cmd}")
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, **kwargs)
+def run(cmd_list, **kwargs):
+    """Run a command with shell=False for safety. cmd_list must be a list of args."""
+    print(f"  $ {' '.join(cmd_list)}")
+    result = subprocess.run(cmd_list, shell=False, capture_output=True, text=True, **kwargs)
     if result.returncode != 0:
         print(f"  STDERR: {result.stderr.strip()}")
     return result
@@ -45,12 +46,12 @@ def ensure_ecr_repo(repo_name):
 
 def docker_login(registry):
     token = subprocess.run(
-        f"aws ecr get-login-password --region {AWS_REGION}",
-        shell=True, capture_output=True, text=True
+        ["aws", "ecr", "get-login-password", "--region", AWS_REGION],
+        shell=False, capture_output=True, text=True
     )
     result = subprocess.run(
-        f"docker login --username AWS --password-stdin {registry}",
-        shell=True, input=token.stdout, capture_output=True, text=True
+        ["docker", "login", "--username", "AWS", "--password-stdin", registry],
+        shell=False, input=token.stdout, capture_output=True, text=True
     )
     if result.returncode == 0:
         log(f"Docker login OK: {registry}")
@@ -62,13 +63,15 @@ def docker_login(registry):
 def build_and_push(repo_name, context_dir):
     image_tag = f"{ECR_ENDPOINT}/{repo_name}:{TAG}"
     run(
-        f"docker build"
-        f" --build-arg AWS_REGION={AWS_REGION}"
-        f" --build-arg SAGEMAKER_REGISTRY={SAGEMAKER_REGISTRY}"
-        f" -t {image_tag} {context_dir}",
+        [
+            "docker", "build",
+            "--build-arg", f"AWS_REGION={AWS_REGION}",
+            "--build-arg", f"SAGEMAKER_REGISTRY={SAGEMAKER_REGISTRY}",
+            "-t", image_tag, context_dir,
+        ],
         cwd=project_root
     )
-    run(f"docker push {image_tag}")
+    run(["docker", "push", image_tag])
     log(f"Pushed: {image_tag}")
 
 

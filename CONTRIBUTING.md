@@ -54,6 +54,18 @@ opensource-codeofconduct@amazon.com with any additional questions or comments.
 
 If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public GitHub issue.
 
+## Security Guidelines for Contributors
+
+When contributing code to this project, please follow these security practices:
+
+- **No hardcoded credentials** — Never commit AWS account IDs, access keys, secret keys, or session tokens. Use environment variables or `config.py` placeholders.
+- **Run git-secrets** — Install and run [git-secrets](https://github.com/awslabs/git-secrets) before committing to prevent accidental credential leakage.
+- **IAM least-privilege** — Any new IAM policies must be scoped to specific resource ARNs. Do not use `*FullAccess` managed policies or `Resource: "*"` without justification.
+- **No `shell=True`** — Use `subprocess.run()` with `shell=False` and argument lists. Do not pass user-controlled strings to shell commands.
+- **Dependency scanning** — If adding new Python dependencies, verify they are from trusted sources and pin versions. Run `pip audit` or equivalent before submitting.
+- **Input validation** — Any new endpoints or data ingestion paths must validate input size, format, and schema before processing.
+- **S3 security** — New buckets must enable Block Public Access, server-side encryption, and TLS-only policies.
+
 ## Licensing
 
 See the [LICENSE](LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.

@@ -15,8 +15,10 @@
 """
 
 # ─── REQUIRED: Set these to your values ───────────────────
-AWS_ACCOUNT_ID = "123456789012"     # e.g. "123456789012"
-AWS_REGION     = "us-east-1"       # e.g. "eu-north-1", "us-east-1"
+# Prefer environment variables; fall back to placeholder for local dev.
+import os as _os_cfg
+AWS_ACCOUNT_ID = _os_cfg.environ.get("AWS_ACCOUNT_ID", "123456789012")
+AWS_REGION     = _os_cfg.environ.get("AWS_REGION", "us-east-1")
 
 # ─── RUN ID (auto-generated, ensures unique bucket names) ─
 import os as _os

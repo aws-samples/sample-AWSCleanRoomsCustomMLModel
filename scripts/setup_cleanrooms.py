@@ -54,7 +54,11 @@ def create_role(role_name, trust_policy, policy_doc, description):
     except iam.exceptions.EntityAlreadyExistsException:
         arn = f"arn:aws:iam::{AWS_ACCOUNT_ID}:role/{role_name}"
         log(f"Role already exists: {role_name}")
-    iam.put_role_policy(RoleName=role_name, PolicyName=f"{role_name}-policy", PolicyDocument=json.dumps(policy_doc))
+    try:
+        iam.put_role_policy(RoleName=role_name, PolicyName=f"{role_name}-policy", PolicyDocument=json.dumps(policy_doc))
+    except Exception as e:
+        log(f"ERROR attaching inline policy to {role_name}: {e}")
+        raise
     return arn
 
 
@@ -151,45 +155,109 @@ def setup_iam_roles():
     data_provider_arn = create_role(ROLE_DATA_PROVIDER, CLEANROOMS_TRUST, {
         "Version": "2012-10-17",
         "Statement": [
-            {"Effect": "Allow", "Action": ["glue:GetDatabase", "glue:GetDatabases", "glue:GetTable", "glue:GetTables",
-                                            "glue:GetPartition", "glue:GetPartitions", "glue:BatchGetPartition"],
-             "Resource": [f"arn:aws:glue:{AWS_REGION}:{AWS_ACCOUNT_ID}:catalog",
-                          f"arn:aws:glue:{AWS_REGION}:{AWS_ACCOUNT_ID}:database/{GLUE_DB}",
-                          f"arn:aws:glue:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/{GLUE_DB}/*"]},
-            {"Effect": "Allow", "Action": ["s3:GetObject", "s3:GetBucketLocation", "s3:ListBucket"],
-             "Resource": [f"arn:aws:s3:::{BUCKET}", f"arn:aws:s3:::{BUCKET}/*"]},
+            {
+                "Sid": "GlueCatalogReadAccess",
+                "Effect": "Allow",
+                # Only singular Get* actions are needed; plural GetDatabases/GetTables removed
+                "Action": ["glue:GetDatabase", "glue:GetTable",
+                           "glue:GetPartition", "glue:GetPartitions", "glue:BatchGetPartition"],
+                "Resource": [f"arn:aws:glue:{AWS_REGION}:{AWS_ACCOUNT_ID}:catalog",
+                             f"arn:aws:glue:{AWS_REGION}:{AWS_ACCOUNT_ID}:database/{GLUE_DB}",
+                             f"arn:aws:glue:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/{GLUE_DB}/{ADVERTISER_TABLE}",
+                             f"arn:aws:glue:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/{GLUE_DB}/{RETAILER_TABLE}"],
+            },
+            {
+                "Sid": "S3ReadDataPrefixes",
+                "Effect": "Allow",
+                "Action": ["s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{BUCKET}/advertiser/*",
+                             f"arn:aws:s3:::{BUCKET}/retailer/*"],
+                "Condition": {"Bool": {"aws:SecureTransport": "true"}},
+            },
+            {
+                "Sid": "S3BucketAccess",
+                "Effect": "Allow",
+                "Action": ["s3:GetBucketLocation", "s3:ListBucket"],
+                "Resource": [f"arn:aws:s3:::{BUCKET}"],
+                "Condition": {"Bool": {"aws:SecureTransport": "true"}},
+            },
         ],
     }, "Allows Clean Rooms to read Glue catalog and S3 data")
 
     model_provider_arn = create_role(ROLE_MODEL_PROVIDER, CLEANROOMS_ML_TRUST, {
         "Version": "2012-10-17",
         "Statement": [
-            {"Effect": "Allow", "Action": ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"],
-             "Resource": [f"arn:aws:ecr:{AWS_REGION}:{AWS_ACCOUNT_ID}:repository/cleanrooms-ml-demo-training",
-                          f"arn:aws:ecr:{AWS_REGION}:{AWS_ACCOUNT_ID}:repository/cleanrooms-ml-demo-inference"]},
-            {"Effect": "Allow", "Action": ["ecr:GetAuthorizationToken"], "Resource": "*"},
+            {
+                "Sid": "ECRPullImages",
+                "Effect": "Allow",
+                "Action": ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"],
+                "Resource": [f"arn:aws:ecr:{AWS_REGION}:{AWS_ACCOUNT_ID}:repository/cleanrooms-ml-demo-training",
+                             f"arn:aws:ecr:{AWS_REGION}:{AWS_ACCOUNT_ID}:repository/cleanrooms-ml-demo-inference"],
+            },
+            {
+                "Sid": "ECRAuthToken",
+                "Effect": "Allow",
+                # ecr:GetAuthorizationToken does not support resource-level permissions;
+                # Resource: * is required by the API.
+                "Action": ["ecr:GetAuthorizationToken"],
+                "Resource": "*",
+            },
         ],
     }, "Allows Clean Rooms ML to pull ECR container images")
 
     ml_config_arn = create_role(ROLE_ML_CONFIG, CLEANROOMS_ML_TRUST, {
         "Version": "2012-10-17",
         "Statement": [
-            {"Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:GetBucketLocation", "s3:ListBucket"],
-             "Resource": [f"arn:aws:s3:::{BUCKET}", f"arn:aws:s3:::{BUCKET}/*",
-                          f"arn:aws:s3:::{OUTPUT_BUCKET}", f"arn:aws:s3:::{OUTPUT_BUCKET}/*"]},
-            {"Effect": "Allow", "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
-             "Resource": f"arn:aws:logs:{AWS_REGION}:{AWS_ACCOUNT_ID}:log-group:/aws/cleanrooms*"},
-            {"Effect": "Allow", "Action": ["cloudwatch:PutMetricData"], "Resource": "*"},
+            {
+                "Sid": "S3DataAccess",
+                "Effect": "Allow",
+                "Action": ["s3:PutObject", "s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{BUCKET}/advertiser/*",
+                             f"arn:aws:s3:::{BUCKET}/retailer/*",
+                             f"arn:aws:s3:::{BUCKET}/data/*",
+                             f"arn:aws:s3:::{OUTPUT_BUCKET}/cleanrooms-ml-output/*"],
+                "Condition": {"Bool": {"aws:SecureTransport": "true"}},
+            },
+            {
+                "Sid": "S3BucketAccess",
+                "Effect": "Allow",
+                "Action": ["s3:GetBucketLocation", "s3:ListBucket"],
+                "Resource": [f"arn:aws:s3:::{BUCKET}", f"arn:aws:s3:::{OUTPUT_BUCKET}"],
+                "Condition": {"Bool": {"aws:SecureTransport": "true"}},
+            },
+            {
+                "Sid": "CloudWatchLogs",
+                "Effect": "Allow",
+                "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+                "Resource": f"arn:aws:logs:{AWS_REGION}:{AWS_ACCOUNT_ID}:log-group:/aws/cleanrooms*",
+            },
+            {
+                "Sid": "CloudWatchMetrics",
+                "Effect": "Allow",
+                # cloudwatch:PutMetricData does not support resource-level permissions;
+                # Resource: * is required by the API.
+                "Action": ["cloudwatch:PutMetricData"],
+                "Resource": "*",
+            },
         ],
     }, "Allows Clean Rooms ML to write metrics, logs, and S3 output")
 
     query_runner_arn = create_role(ROLE_QUERY_RUNNER, CLEANROOMS_ML_TRUST, {
         "Version": "2012-10-17",
         "Statement": [
-            {"Effect": "Allow", "Action": ["cleanrooms:StartProtectedQuery", "cleanrooms:GetProtectedQuery",
-                                            "cleanrooms:GetCollaboration", "cleanrooms:GetSchema",
-                                            "cleanrooms:GetSchemaAnalysisRule", "cleanrooms:ListSchemas"],
-             "Resource": "*"},
+            {
+                "Sid": "CleanRoomsQueryAccess",
+                "Effect": "Allow",
+                # Clean Rooms query actions require membership/collaboration ARNs.
+                # These are scoped to this account; cross-account access is not granted.
+                "Action": ["cleanrooms:StartProtectedQuery", "cleanrooms:GetProtectedQuery",
+                           "cleanrooms:GetCollaboration", "cleanrooms:GetSchema",
+                           "cleanrooms:GetSchemaAnalysisRule", "cleanrooms:ListSchemas"],
+                "Resource": [
+                    f"arn:aws:cleanrooms:{AWS_REGION}:{AWS_ACCOUNT_ID}:membership/*",
+                    f"arn:aws:cleanrooms:{AWS_REGION}:{AWS_ACCOUNT_ID}:collaboration/*",
+                ],
+            },
         ],
     }, "Allows Clean Rooms ML to run queries for ML input channels")
 

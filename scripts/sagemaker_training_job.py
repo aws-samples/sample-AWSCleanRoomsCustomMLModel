@@ -61,10 +61,84 @@ def ensure_role():
         })
         resp = iam.create_role(RoleName=ROLE_NAME, AssumeRolePolicyDocument=trust)
         role_arn = resp["Role"]["Arn"]
-        iam.attach_role_policy(RoleName=ROLE_NAME,
-            PolicyArn="arn:aws:iam::aws:policy/AmazonSageMakerFullAccess")
-        iam.attach_role_policy(RoleName=ROLE_NAME,
-            PolicyArn="arn:aws:iam::aws:policy/AmazonS3FullAccess")
+
+        # Scoped SageMaker permissions instead of AmazonSageMakerFullAccess
+        iam.put_role_policy(
+            RoleName=ROLE_NAME,
+            PolicyName=f"{ROLE_NAME}-sagemaker-policy",
+            PolicyDocument=json.dumps({
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "SageMakerTrainingAccess",
+                        "Effect": "Allow",
+                        "Action": [
+                            "sagemaker:CreateTrainingJob",
+                            "sagemaker:DescribeTrainingJob",
+                            "sagemaker:StopTrainingJob",
+                            "sagemaker:ListTags",
+                        ],
+                        "Resource": f"arn:aws:sagemaker:{AWS_REGION}:{AWS_ACCOUNT_ID}:training-job/cleanrooms-*",
+                    },
+                    {
+                        "Sid": "CloudWatchLogs",
+                        "Effect": "Allow",
+                        "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+                        "Resource": f"arn:aws:logs:{AWS_REGION}:{AWS_ACCOUNT_ID}:log-group:/aws/sagemaker/*",
+                    },
+                    {
+                        "Sid": "CloudWatchMetrics",
+                        "Effect": "Allow",
+                        # cloudwatch:PutMetricData does not support resource-level permissions
+                        "Action": ["cloudwatch:PutMetricData"],
+                        "Resource": "*",
+                    },
+                    {
+                        "Sid": "ECRPull",
+                        "Effect": "Allow",
+                        "Action": ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"],
+                        "Resource": f"arn:aws:ecr:{AWS_REGION}:662702820516:repository/sagemaker-scikit-learn",
+                    },
+                    {
+                        "Sid": "ECRAuth",
+                        "Effect": "Allow",
+                        # ecr:GetAuthorizationToken does not support resource-level permissions
+                        "Action": ["ecr:GetAuthorizationToken"],
+                        "Resource": "*",
+                    },
+                ],
+            }),
+        )
+
+        # Scoped S3 permissions instead of AmazonS3FullAccess
+        iam.put_role_policy(
+            RoleName=ROLE_NAME,
+            PolicyName=f"{ROLE_NAME}-s3-policy",
+            PolicyDocument=json.dumps({
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "S3DataAccess",
+                        "Effect": "Allow",
+                        "Action": ["s3:GetObject", "s3:PutObject"],
+                        "Resource": [
+                            f"arn:aws:s3:::{BUCKET}/data/*",
+                            f"arn:aws:s3:::{BUCKET}/sagemaker-source/*",
+                            f"arn:aws:s3:::{BUCKET}/sagemaker-output/*",
+                        ],
+                        "Condition": {"Bool": {"aws:SecureTransport": "true"}},
+                    },
+                    {
+                        "Sid": "S3BucketList",
+                        "Effect": "Allow",
+                        "Action": ["s3:ListBucket", "s3:GetBucketLocation"],
+                        "Resource": f"arn:aws:s3:::{BUCKET}",
+                        "Condition": {"Bool": {"aws:SecureTransport": "true"}},
+                    },
+                ],
+            }),
+        )
+        log("Attached scoped inline policies (SageMaker + S3)")
         log("Waiting 15s for role propagation...")
         time.sleep(15)
     return role_arn

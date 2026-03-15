@@ -66,16 +66,42 @@ def load_model():
     return _model, _feature_cols
 
 
+MAX_INPUT_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB safety limit
+
+EXPECTED_COLUMNS = {
+    "user_id", "ad_campaign_id", "impressions", "clicks", "time_spent_seconds",
+    "device_type", "event_date", "product_category", "purchase_amount",
+    "purchase_count", "site_visits", "days_since_last_purchase",
+    "last_purchase_date", "converted",
+}
+
+
 def predict(input_data, content_type="text/csv"):
     model, feature_cols = load_model()
 
-    if content_type == "application/json":
-        df = pd.read_json(io.StringIO(input_data))
-    else:
-        df = pd.read_csv(io.StringIO(input_data))
-        if df.columns[0] not in ["user_id", "ad_campaign_id", "product_category",
-                                  "impressions", "clicks"] and len(df.columns) == len(CLEANROOMS_COLUMNS):
-            df = pd.read_csv(io.StringIO(input_data), header=None, names=CLEANROOMS_COLUMNS)
+    # Input size validation
+    if len(input_data.encode("utf-8")) > MAX_INPUT_SIZE_BYTES:
+        raise ValueError(f"Input exceeds maximum allowed size of {MAX_INPUT_SIZE_BYTES} bytes")
+
+    # Parse input with error handling
+    try:
+        if content_type == "application/json":
+            df = pd.read_json(io.StringIO(input_data))
+        else:
+            df = pd.read_csv(io.StringIO(input_data))
+            if df.columns[0] not in ["user_id", "ad_campaign_id", "product_category",
+                                      "impressions", "clicks"] and len(df.columns) == len(CLEANROOMS_COLUMNS):
+                df = pd.read_csv(io.StringIO(input_data), header=None, names=CLEANROOMS_COLUMNS)
+    except Exception as e:
+        raise ValueError(f"Failed to parse input data ({content_type}): {e}")
+
+    if df.empty:
+        raise ValueError("Input data is empty")
+
+    # Schema validation: check that columns are a subset of expected
+    unknown_cols = set(df.columns) - EXPECTED_COLUMNS - set(feature_cols)
+    if unknown_cols:
+        logger.warning(f"Unexpected columns in input (ignored): {unknown_cols}")
 
     user_ids = df["user_id"] if "user_id" in df.columns else None
 

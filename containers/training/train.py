@@ -68,19 +68,23 @@ def load_data(train_dir, file_format):
     dataframes = {}
     for filepath in all_files:
         name = os.path.basename(filepath).replace(f".{file_format}", "")
-        if file_format == "csv":
-            df = pd.read_csv(filepath)
-            first_col = str(df.columns[0])
-            is_headerless = (
-                first_col not in ["user_id", "ad_campaign_id", "product_category", "impressions", "clicks", "purchase_amount"]
-                and len(df.columns) == len(CLEANROOMS_COLUMNS)
-            )
-            if is_headerless:
-                df = pd.read_csv(filepath, header=None, names=CLEANROOMS_COLUMNS)
-            elif len(df.columns) == len(CLEANROOMS_COLUMNS) - 1:
-                df = pd.read_csv(filepath, header=None, names=CLEANROOMS_COLUMNS)
-        else:
-            df = pd.read_parquet(filepath)
+        try:
+            if file_format == "csv":
+                df = pd.read_csv(filepath)
+                first_col = str(df.columns[0])
+                is_headerless = (
+                    first_col not in ["user_id", "ad_campaign_id", "product_category", "impressions", "clicks", "purchase_amount"]
+                    and len(df.columns) == len(CLEANROOMS_COLUMNS)
+                )
+                if is_headerless:
+                    df = pd.read_csv(filepath, header=None, names=CLEANROOMS_COLUMNS)
+                elif len(df.columns) == len(CLEANROOMS_COLUMNS) - 1:
+                    df = pd.read_csv(filepath, header=None, names=CLEANROOMS_COLUMNS)
+            else:
+                df = pd.read_parquet(filepath)
+        except Exception as e:
+            logger.error(f"Failed to read {filepath}: {e}")
+            raise ValueError(f"Could not parse data file {filepath} as {file_format}: {e}")
         dataframes[name] = df
         logger.info(f"  Loaded {name}: {df.shape}")
     return dataframes

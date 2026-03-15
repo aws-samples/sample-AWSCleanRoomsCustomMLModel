@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from config import *
 validate()
 
-import boto3
+import boto3, json
 
 s3 = boto3.client("s3", region_name=AWS_REGION)
 
@@ -48,6 +48,54 @@ def create_bucket(bucket_name):
             log(f"Bucket already exists: {bucket_name}")
         else:
             raise
+
+    # Block all public access
+    s3.put_public_access_block(
+        Bucket=bucket_name,
+        PublicAccessBlockConfiguration={
+            "BlockPublicAcls": True,
+            "IgnorePublicAcls": True,
+            "BlockPublicPolicy": True,
+            "RestrictPublicBuckets": True,
+        },
+    )
+    log(f"  Enabled Block Public Access on {bucket_name}")
+
+    # Default encryption (SSE-S3)
+    s3.put_bucket_encryption(
+        Bucket=bucket_name,
+        ServerSideEncryptionConfiguration={
+            "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}],
+        },
+    )
+    log(f"  Enabled default SSE-S3 encryption on {bucket_name}")
+
+    # Versioning
+    s3.put_bucket_versioning(
+        Bucket=bucket_name,
+        VersioningConfiguration={"Status": "Enabled"},
+    )
+    log(f"  Enabled versioning on {bucket_name}")
+
+    # Enforce TLS-only access via bucket policy
+    s3.put_bucket_policy(
+        Bucket=bucket_name,
+        Policy=json.dumps({
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Sid": "DenyInsecureTransport",
+                "Effect": "Deny",
+                "Principal": "*",
+                "Action": "s3:*",
+                "Resource": [
+                    f"arn:aws:s3:::{bucket_name}",
+                    f"arn:aws:s3:::{bucket_name}/*",
+                ],
+                "Condition": {"Bool": {"aws:SecureTransport": "false"}},
+            }],
+        }),
+    )
+    log(f"  Enforced TLS-only bucket policy on {bucket_name}")
 
 
 def upload_file(local_path, bucket, key):

@@ -10,6 +10,9 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", stream=sys.stdout)
 logger = logging.getLogger(__name__)
 PORT = 8080
+# Note: TLS termination is handled by the SageMaker / Clean Rooms ML platform.
+# This server runs behind a load balancer that enforces HTTPS externally.
+MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB
 
 _model_error = None
 try:
@@ -32,6 +35,16 @@ class InferenceHandler(BaseHTTPRequestHandler):
         if self.path == "/invocations":
             try:
                 content_length = int(self.headers.get("Content-Length", 0))
+                if content_length > MAX_CONTENT_LENGTH:
+                    self.send_response(413)
+                    self.end_headers()
+                    self.wfile.write(f"Payload too large (max {MAX_CONTENT_LENGTH} bytes)".encode("utf-8"))
+                    return
+                if content_length == 0:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b"Empty request body")
+                    return
                 content_type = self.headers.get("Content-Type", "text/csv")
                 body = self.rfile.read(content_length).decode("utf-8")
                 if _model_error:

@@ -11,7 +11,7 @@ Scenario: Customer Propensity Scoring
 """
 
 import csv
-import random
+import random  # nosec B311 — synthetic data generation; cryptographic randomness not required
 import os
 from datetime import datetime, timedelta
 

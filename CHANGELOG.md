@@ -9,6 +9,6 @@
 - Customer Propensity Scoring demo with AWS Clean Rooms ML
 - Synthetic data generation for advertiser engagement and retailer purchase data
 - Training container with GradientBoosting classifier
-- Inference container compatible with Clean Rooms ML (SageMaker PyTorch base image)
-- End-to-end setup scripts: data upload, container build, Clean Rooms infrastructure, ML pipeline
-- Local testing and SageMaker direct training options
+- Inference container compatible with AWS Clean Rooms ML (SageMaker AI PyTorch base image)
+- End-to-end setup scripts: data upload, container build, AWS Clean Rooms infrastructure, ML pipeline
+- Local testing and SageMaker AI direct training options

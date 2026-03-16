@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT-0
 
 """
-Upload synthetic data to S3 for Clean Rooms ML demo.
+Upload synthetic data to S3 for AWS Clean Rooms ML demo.
 Creates source and output buckets, uploads CSVs.
 Reads config from config.py.
 """
@@ -126,7 +126,7 @@ def main():
     # Upload retailer data (Party B)
     upload_file(ret_csv, BUCKET, "retailer/retailer_purchases.csv")
 
-    # Upload both under data/ prefix for SageMaker training channel
+    # Upload both under data/ prefix for SageMaker AI training channel
     upload_file(adv_csv, BUCKET, "data/advertiser_engagement.csv")
     upload_file(ret_csv, BUCKET, "data/retailer_purchases.csv")
 

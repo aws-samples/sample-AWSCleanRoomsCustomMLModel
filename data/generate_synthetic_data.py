@@ -95,16 +95,18 @@ def generate_retailer_data():
         for category in random.sample(CATEGORIES, num_categories):
             site_visits = max(1, int(random.randint(1, 8) + 15 * base_propensity))
 
+            avg_price = {"electronics": 150, "clothing": 45, "home_garden": 65,
+                         "sports": 55, "beauty": 30, "grocery": 25, "toys": 35}[category]
             if converted:
-                purchase_count = random.randint(1, 15)
-                avg_price = {"electronics": 150, "clothing": 45, "home_garden": 65,
-                             "sports": 55, "beauty": 30, "grocery": 25, "toys": 35}[category]
-                purchase_amount = round(purchase_count * avg_price * random.uniform(0.5, 1.5), 2)
-                days_since = random.randint(1, 180)
+                purchase_count = random.randint(3, 15)
+                purchase_amount = round(purchase_count * avg_price * random.uniform(0.7, 1.5), 2)
+                days_since = random.randint(1, 90)
             else:
-                purchase_count = 0
-                purchase_amount = 0.0
-                days_since = random.randint(1, 180)
+                # Non-converters still have some purchase activity (browsing, small purchases)
+                # This prevents perfect separability and produces continuous propensity scores
+                purchase_count = random.randint(0, 6)
+                purchase_amount = round(purchase_count * avg_price * random.uniform(0.2, 0.8), 2)
+                days_since = random.randint(30, 180)
 
             last_date = (BASE_DATE + timedelta(days=180) - timedelta(days=min(days_since, 180))).strftime("%Y-%m-%d")
 

@@ -3,7 +3,7 @@
 Thank you for your interest in contributing to our project. Whether it's a bug report, new feature, correction, or additional
 documentation, we greatly value feedback and contributions from our community.
 
-Please read through this document before submitting any issues or pull requests to ensure we have all the necessary
+Please read through this document before submitting any issues or pull requests so we have all the necessary
 information to effectively respond to your bug report or contribution.
 
 ## Reporting Bugs/Feature Requests
@@ -20,7 +20,7 @@ reported the issue. Please try to include as much information as you can. Detail
 
 ## Contributing via Pull Requests
 
-Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
+Contributions via pull requests are much appreciated. Before sending us a pull request, please verify that:
 
 1. You are working against the latest source on the *main* branch.
 2. You check existing open, and recently merged, pull requests to make sure someone else hasn't addressed the problem already.
@@ -30,7 +30,7 @@ To send us a pull request, please:
 
 1. Fork the repository.
 2. Modify the source; please focus on the specific change you are contributing. If you also reformat all the code, it will be hard for us to focus on your change.
-3. Ensure local tests pass.
+3. Confirm local tests pass.
 4. Commit to your fork using clear commit messages.
 5. Send us a pull request, answering any default questions in the pull request interface.
 6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
@@ -58,7 +58,7 @@ If you discover a potential security issue in this project we ask that you notif
 
 When contributing code to this project, please follow these security practices:
 
-- **No hardcoded credentials** — Never commit AWS account IDs, access keys, secret keys, or session tokens. Use environment variables or `config.py` placeholders.
+- **No hardcoded credentials** — Do not commit AWS account IDs, access keys, secret keys, or session tokens. Use environment variables or `config.py` placeholders.
 - **Run git-secrets** — Install and run [git-secrets](https://github.com/awslabs/git-secrets) before committing to prevent accidental credential leakage.
 - **IAM least-privilege** — Any new IAM policies must be scoped to specific resource ARNs. Do not use `*FullAccess` managed policies or `Resource: "*"` without justification.
 - **No `shell=True`** — Use `subprocess.run()` with `shell=False` and argument lists. Do not pass user-controlled strings to shell commands.

@@ -3,7 +3,7 @@
 
 """
 Test training locally without Docker or AWS resources.
-Simulates the SageMaker directory structure and runs train.py directly.
+Simulates the SageMaker AI directory structure and runs train.py directly.
 """
 import sys, os, shutil, subprocess, json
 

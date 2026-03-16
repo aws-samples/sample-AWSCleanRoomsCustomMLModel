@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT-0
 
 # Training container for Customer Propensity Scoring
-# Compatible with: local, SageMaker Training, Clean Rooms ML
+# Compatible with: local, SageMaker AI Training, AWS Clean Rooms ML
 ARG SAGEMAKER_REGISTRY=763104351884
 ARG AWS_REGION=us-east-1
 FROM ${SAGEMAKER_REGISTRY}.dkr.ecr.${AWS_REGION}.amazonaws.com/pytorch-training:2.3.0-cpu-py311-ubuntu20.04-sagemaker

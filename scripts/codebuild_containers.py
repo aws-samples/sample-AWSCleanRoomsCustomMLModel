@@ -68,7 +68,7 @@ def create_codebuild_role():
              "Resource": [
                 f"arn:aws:ecr:{AWS_REGION}:{AWS_ACCOUNT_ID}:repository/cleanrooms-ml-demo-training",
                 f"arn:aws:ecr:{AWS_REGION}:{AWS_ACCOUNT_ID}:repository/cleanrooms-ml-demo-inference"]},
-            {"Sid": "ECRPullSageMakerDLC",
+            {"Sid": "ECRPullSageMakerAIDLC",
              "Effect": "Allow",
              "Action": [
                 "ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer",
@@ -101,7 +101,7 @@ def upload_source():
 def create_or_update_project(role_arn):
     project_config = dict(
         name=PROJECT_NAME,
-        description="Build Clean Rooms ML demo containers",
+        description="Build AWS Clean Rooms ML demo containers",
         source={"type": "S3", "location": f"{BUCKET}/{SOURCE_KEY}"},
         artifacts={"type": "NO_ARTIFACTS"},
         environment={

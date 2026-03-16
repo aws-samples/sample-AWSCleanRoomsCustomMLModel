@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT-0
 
 # Inference container for Customer Propensity Scoring
-# Uses SageMaker AI inference base image as required by Clean Rooms ML docs
+# Uses SageMaker AI inference base image as required by AWS Clean Rooms ML docs
 ARG SAGEMAKER_REGISTRY=763104351884
 ARG AWS_REGION=us-east-1
 FROM ${SAGEMAKER_REGISTRY}.dkr.ecr.${AWS_REGION}.amazonaws.com/pytorch-inference:2.3.0-cpu-py311-ubuntu20.04-sagemaker

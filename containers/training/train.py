@@ -3,7 +3,7 @@
 
 """
 Training script for Customer Propensity Scoring model.
-Compatible with: local testing, SageMaker Training, and Clean Rooms ML.
+Compatible with: local testing, SageMaker AI Training, and AWS Clean Rooms ML.
 """
 
 import argparse, os, sys, json, glob, traceback, logging

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT-0
 
 """
-Launch a SageMaker Training Job using pre-built scikit-learn container.
+Launch a SageMaker AI Training Job using pre-built scikit-learn container.
 Reads config from config.py.
 """
 import sys, os, tarfile, time, json
@@ -44,7 +44,7 @@ def package_source():
 
 
 def ensure_role():
-    """Create SageMaker execution role if it doesn't exist."""
+    """Create SageMaker AI execution role if it doesn't exist."""
     try:
         resp = iam.get_role(RoleName=ROLE_NAME)
         role_arn = resp["Role"]["Arn"]
@@ -62,7 +62,7 @@ def ensure_role():
         resp = iam.create_role(RoleName=ROLE_NAME, AssumeRolePolicyDocument=trust)
         role_arn = resp["Role"]["Arn"]
 
-        # Scoped SageMaker permissions instead of AmazonSageMakerFullAccess
+        # Scoped SageMaker AI permissions instead of AmazonSageMakerFullAccess
         iam.put_role_policy(
             RoleName=ROLE_NAME,
             PolicyName=f"{ROLE_NAME}-sagemaker-policy",
@@ -138,7 +138,7 @@ def ensure_role():
                 ],
             }),
         )
-        log("Attached scoped inline policies (SageMaker + S3)")
+        log("Attached scoped inline policies (SageMaker AI + S3)")
         log("Waiting 15s for role propagation...")
         time.sleep(15)
     return role_arn
@@ -148,7 +148,7 @@ def main():
     job_name = f"cleanrooms-propensity-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
     print("=" * 60)
-    print("SageMaker Training Job")
+    print("SageMaker AI Training Job")
     print("=" * 60)
     print(f"Job Name: {job_name}")
     print(f"Image:    {SKLEARN_IMAGE}")

@@ -55,10 +55,10 @@ The following security controls are implemented in the setup scripts:
 
 Before deploying to a production or shared environment:
 
-1. **Rotate credentials** — Ensure the AWS credentials used during setup are rotated or scoped to a temporary session.
+1. **Rotate credentials** — Verify that the AWS credentials used during setup are rotated or scoped to a temporary session.
 2. **Review IAM policies** — Verify the inline policies created by `setup_cleanrooms.py` match your organization's requirements.
-3. **Enable CloudTrail** — Ensure AWS CloudTrail is logging API calls in the region where you deploy.
+3. **Enable CloudTrail** — Confirm that AWS CloudTrail is logging API calls in the region where you deploy.
 4. **Enable GuardDuty** — Enable Amazon GuardDuty for threat detection on the account.
-5. **Restrict network access** — If running containers locally, ensure Docker is not exposing ports to the public internet.
+5. **Restrict network access** — If running containers locally, verify that Docker is not exposing ports to the public internet.
 6. **Scan container images** — Run Amazon ECR image scanning on the pushed training and inference images.
 7. **Review S3 bucket policies** — Confirm the TLS-only and Block Public Access settings are active after deployment.

@@ -66,7 +66,7 @@ def create_role(role_name, trust_policy, policy_doc, description):
 def setup_glue():
     print("\n[1/8] Setting up Glue Data Catalog...")
     try:
-        glue.create_database(DatabaseInput={"Name": GLUE_DB, "Description": "Clean Rooms ML demo"})
+        glue.create_database(DatabaseInput={"Name": GLUE_DB, "Description": "AWS Clean Rooms ML demo"})
         log(f"Created database: {GLUE_DB}")
     except glue.exceptions.AlreadyExistsException:
         log(f"Database already exists: {GLUE_DB}")
@@ -182,7 +182,7 @@ def setup_iam_roles():
                 "Condition": {"Bool": {"aws:SecureTransport": "true"}},
             },
         ],
-    }, "Allows Clean Rooms to read Glue catalog and S3 data")
+    }, "Allows AWS Clean Rooms to read Glue catalog and S3 data")
 
     model_provider_arn = create_role(ROLE_MODEL_PROVIDER, CLEANROOMS_ML_TRUST, {
         "Version": "2012-10-17",
@@ -203,7 +203,7 @@ def setup_iam_roles():
                 "Resource": "*",
             },
         ],
-    }, "Allows Clean Rooms ML to pull ECR container images")
+    }, "Allows AWS Clean Rooms ML to pull ECR container images")
 
     ml_config_arn = create_role(ROLE_ML_CONFIG, CLEANROOMS_ML_TRUST, {
         "Version": "2012-10-17",
@@ -240,7 +240,7 @@ def setup_iam_roles():
                 "Resource": "*",
             },
         ],
-    }, "Allows Clean Rooms ML to write metrics, logs, and S3 output")
+    }, "Allows AWS Clean Rooms ML to write metrics, logs, and S3 output")
 
     query_runner_arn = create_role(ROLE_QUERY_RUNNER, CLEANROOMS_ML_TRUST, {
         "Version": "2012-10-17",
@@ -248,7 +248,7 @@ def setup_iam_roles():
             {
                 "Sid": "CleanRoomsQueryAccess",
                 "Effect": "Allow",
-                # Clean Rooms query actions require membership/collaboration ARNs.
+                # AWS Clean Rooms query actions require membership/collaboration ARNs.
                 # These are scoped to this account; cross-account access is not granted.
                 "Action": ["cleanrooms:StartProtectedQuery", "cleanrooms:GetProtectedQuery",
                            "cleanrooms:GetCollaboration", "cleanrooms:GetSchema",
@@ -259,7 +259,7 @@ def setup_iam_roles():
                 ],
             },
         ],
-    }, "Allows Clean Rooms ML to run queries for ML input channels")
+    }, "Allows AWS Clean Rooms ML to run queries for ML input channels")
 
     log("Waiting 10s for IAM role propagation...")
     time.sleep(10)
@@ -267,9 +267,9 @@ def setup_iam_roles():
             "ml_config": ml_config_arn, "query_runner": query_runner_arn}
 
 
-# ═══ 3. CLEAN ROOMS COLLABORATION ═══
+# ═══ 3. AWS CLEAN ROOMS COLLABORATION ═══
 def setup_collaboration():
-    print("\n[3/8] Setting up Clean Rooms collaboration...")
+    print("\n[3/8] Setting up AWS Clean Rooms collaboration...")
     existing = cr.list_collaborations(memberStatus="ACTIVE")
     for collab in existing.get("collaborationList", []):
         if collab["name"] == f"{PREFIX}-collaboration":

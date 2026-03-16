@@ -396,7 +396,7 @@ scripts/
 
 ## Architecture Diagram
 
-> **Note:** If the diagram below doesn't render (e.g. on code.amazon.com), view the pre-rendered image at [`architecture.png`](architecture.png).
+> **Note:** If the diagram below doesn't render, view the pre-rendered image at [`architecture.png`](architecture.png).
 
 ```mermaid
 flowchart TB

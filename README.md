@@ -205,9 +205,11 @@ python scripts/sagemaker_training_job.py
 
 > **Note:** If the diagram below doesn't render, view the pre-rendered image at [`architecture.png`](architecture.png).
 
+![Architecture Diagram](https://code.amazon.com/packages/AWSCleanRoomsCustomMLModelDemo/blobs/mainline/--/architecture.png?raw=1)
+
 ```mermaid
 flowchart TB
-    subgraph S3_Source["Amazon S3 — Source Data"]
+    subgraph S3_Source["Amazon S3  Source Data"]
         A["Advertiser Engagement CSV"]
         B["Retailer Purchases CSV"]
     end
@@ -217,13 +219,13 @@ flowchart TB
         GB["retailer_purchases"]
     end
 
-    subgraph ECR["Amazon ECR — Container Images"]
+    subgraph ECR["Amazon ECR  Container Images"]
         TI["Training Image\n(GradientBoosting + sklearn)"]
         TI ~~~ II
         II["Inference Image\n(SageMaker AI PyTorch base)"]
     end
 
-    subgraph CR["AWS Clean Rooms — Collaboration"]
+    subgraph CR["AWS Clean Rooms  Collaboration"]
         CT["Configured Tables\n+ Analysis Rules"]
         CRML["AWS Clean Rooms ML"]
         TJ["Training Job"]
@@ -235,7 +237,7 @@ flowchart TB
         TJ -->|"model.joblib"| IJ
     end
 
-    subgraph S3_Output["Amazon S3 — Results"]
+    subgraph S3_Output["Amazon S3  Results"]
         OUT["propensity_score\npredicted_converter"]
     end
 

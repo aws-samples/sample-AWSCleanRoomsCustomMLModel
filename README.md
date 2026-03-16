@@ -205,7 +205,7 @@ python scripts/sagemaker_training_job.py
 
 > **Note:** If the diagram below doesn't render, view the pre-rendered image at [`architecture.png`](architecture.png).
 
-![Architecture Diagram](https://code.amazon.com/packages/AWSCleanRoomsCustomMLModelDemo/blobs/mainline/--/architecture.png?raw=1)
+![Architecture Diagram](architecture.png)
 
 ```mermaid
 flowchart TB
@@ -221,7 +221,6 @@ flowchart TB
 
     subgraph ECR["Amazon ECR  Container Images"]
         TI["Training Image\n(GradientBoosting + sklearn)"]
-        TI ~~~ II
         II["Inference Image\n(SageMaker AI PyTorch base)"]
     end
 

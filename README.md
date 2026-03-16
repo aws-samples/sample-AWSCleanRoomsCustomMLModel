@@ -396,7 +396,7 @@ scripts/
 
 ## Architecture Diagram
 
-![Architecture Diagram](architecture.png)
+![Architecture Diagram](https://code.amazon.com/packages/AWSCleanRoomsCustomMLModelDemo/blobs/mainline/--/architecture.png)
 
 ## Security Considerations
 

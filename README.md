@@ -329,6 +329,8 @@ The synthetic data embeds a learnable signal: shared users (who appear in both d
 - Higher purchase amounts and counts
 - Higher probability of conversion (threshold at 0.50 with noise)
 
+The signal is intentionally noisy: converters and non-converters have overlapping feature distributions (e.g., non-converters can have high purchase counts, converters can have low ones). This overlap produces a realistic spread of continuous propensity scores (0.1–0.9) rather than binary 0/1 predictions.
+
 ---
 
 ## Feature Engineering
@@ -424,7 +426,7 @@ Example output rows:
 | 0.3102 | 0 |
 | 0.1547 | 0 |
 | 0.9201 | 1 |
-| 0.0834 | 0 |
+| 0.4834 | 0 |
 
 ### Interpreting the Results
 
@@ -440,13 +442,13 @@ The model is evaluated on a held-out 20% test set during training. Typical metri
 
 | Metric | Approximate Value |
 |--------|-------------------|
-| Accuracy | ~85–90% |
-| Precision | ~85–90% |
-| Recall | ~85–90% |
-| F1 Score | ~85–90% |
-| ROC-AUC | ~0.92–0.95 |
+| Accuracy | ~78–82% |
+| Precision | ~78–82% |
+| Recall | ~80–85% |
+| F1 Score | ~80–84% |
+| ROC-AUC | ~0.86–0.90 |
 
-> **Note:** These are approximate ranges for the synthetic data. Actual metrics depend on the random seed and data split. The strong performance reflects the intentionally embedded signal in the synthetic data generation process.
+> **Note:** These are approximate ranges for the synthetic data. Actual metrics depend on the random seed and data split. The moderate performance reflects the intentionally noisy signal in the synthetic data — converters and non-converters have overlapping feature distributions, producing a realistic spread of propensity scores rather than binary predictions.
 
 ---
 

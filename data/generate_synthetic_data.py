@@ -53,12 +53,13 @@ def generate_advertiser_data():
         propensity = max(0.05, min(0.95, propensity))
 
         for campaign in random.sample(CAMPAIGNS, num_campaigns):
-            impressions = max(1, int(random.randint(1, 30) + 30 * propensity))
+            # Weaker propensity signal: more baseline randomness, less propensity-driven
+            impressions = max(1, int(random.randint(5, 40) + 10 * propensity))
             device = random.choice(DEVICES)
             base_ctr = {"mobile": 0.08, "desktop": 0.05, "tablet": 0.06, "smart_tv": 0.03}[device]
-            ctr = base_ctr * (0.2 + 2.0 * propensity) * random.uniform(0.8, 1.3)
+            ctr = base_ctr * (0.5 + 1.0 * propensity) * random.uniform(0.6, 1.5)
             clicks = max(0, int(impressions * ctr))
-            time_per_click = random.uniform(5, 30) * (0.2 + 2.0 * propensity)
+            time_per_click = random.uniform(5, 30) * (0.5 + 1.0 * propensity)
             time_spent = round(clicks * time_per_click, 1) if clicks > 0 else 0
             event_date = random_date(BASE_DATE, BASE_DATE + timedelta(days=180))
 
@@ -88,25 +89,28 @@ def generate_retailer_data():
 
         USER_PROPENSITY[uid] = base_propensity
 
-        noise = random.gauss(0, 0.08)
+        # More noise on conversion label — creates label noise that prevents overconfidence
+        noise = random.gauss(0, 0.18)
         converted = (base_propensity + noise) > 0.50
 
         num_categories = random.randint(1, 4)
         for category in random.sample(CATEGORIES, num_categories):
-            site_visits = max(1, int(random.randint(1, 8) + 15 * base_propensity))
+            site_visits = max(1, int(random.randint(3, 12) + 8 * base_propensity))
 
             avg_price = {"electronics": 150, "clothing": 45, "home_garden": 65,
                          "sports": 55, "beauty": 30, "grocery": 25, "toys": 35}[category]
+
+            # Overlapping purchase distributions: converters and non-converters share
+            # a wide range of purchase activity, with converters skewing higher on average.
+            # This overlap forces the model to be uncertain for many records.
             if converted:
-                purchase_count = random.randint(3, 15)
-                purchase_amount = round(purchase_count * avg_price * random.uniform(0.7, 1.5), 2)
-                days_since = random.randint(1, 90)
+                purchase_count = random.randint(1, 15)
+                purchase_amount = round(purchase_count * avg_price * random.uniform(0.3, 1.5), 2)
+                days_since = random.randint(1, 150)
             else:
-                # Non-converters still have some purchase activity (browsing, small purchases)
-                # This prevents perfect separability and produces continuous propensity scores
-                purchase_count = random.randint(0, 6)
-                purchase_amount = round(purchase_count * avg_price * random.uniform(0.2, 0.8), 2)
-                days_since = random.randint(30, 180)
+                purchase_count = random.randint(0, 10)
+                purchase_amount = round(purchase_count * avg_price * random.uniform(0.2, 1.2), 2)
+                days_since = random.randint(10, 180)
 
             last_date = (BASE_DATE + timedelta(days=180) - timedelta(days=min(days_since, 180))).strftime("%Y-%m-%d")
 

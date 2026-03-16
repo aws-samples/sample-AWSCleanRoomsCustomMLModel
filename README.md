@@ -203,10 +203,6 @@ python scripts/sagemaker_training_job.py
 
 ## Architecture Diagram
 
-> **Note:** If the diagram below doesn't render, view the pre-rendered image at [`architecture.png`](architecture.png).
-
-![Architecture Diagram](architecture.png)
-
 ```mermaid
 flowchart TB
     subgraph S3_Source["Amazon S3  Source Data"]

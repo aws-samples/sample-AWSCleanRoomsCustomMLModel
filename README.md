@@ -396,7 +396,50 @@ scripts/
 
 ## Architecture Diagram
 
-![Architecture Diagram](https://code.amazon.com/packages/AWSCleanRoomsCustomMLModelDemo/blobs/mainline/--/architecture.png)
+> **Note:** If the diagram below doesn't render (e.g. on code.amazon.com), view the pre-rendered image at [`architecture.png`](architecture.png).
+
+```mermaid
+flowchart TB
+    subgraph S3_Source["Amazon S3 — Source Data"]
+        A["Advertiser Engagement CSV"]
+        B["Retailer Purchases CSV"]
+    end
+
+    subgraph Glue["AWS Glue Data Catalog"]
+        GA["advertiser_engagement"]
+        GB["retailer_purchases"]
+    end
+
+    subgraph ECR["Amazon ECR — Container Images"]
+        TI["Training Image\n(GradientBoosting + sklearn)"]
+        TI ~~~ II
+        II["Inference Image\n(SageMaker AI PyTorch base)"]
+    end
+
+    subgraph CR["AWS Clean Rooms — Collaboration"]
+        CT["Configured Tables\n+ Analysis Rules"]
+        CRML["AWS Clean Rooms ML"]
+        TJ["Training Job"]
+        IJ["Inference Job"]
+
+        CT -->|"JOIN on user_id"| CRML
+        CRML --> TJ
+        CRML --> IJ
+        TJ -->|"model.joblib"| IJ
+    end
+
+    subgraph S3_Output["Amazon S3 — Results"]
+        OUT["propensity_score\npredicted_converter"]
+    end
+
+    A --> GA
+    B --> GB
+    GA --> CT
+    GB --> CT
+    TI -.->|"pulled by"| TJ
+    II -.->|"pulled by"| IJ
+    IJ --> OUT
+```
 
 ## Security Considerations
 

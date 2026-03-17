@@ -23,6 +23,7 @@ Self-contained, reusable demo for **Customer Propensity Scoring** using AWS Clea
 - [Data Classification](#data-classification)
 - [Bias and Fairness Considerations](#bias-and-fairness-considerations)
 - [Data Governance](#data-governance)
+- [Undeploy Resources](#undeploy-resources)
 - [License](#license)
 
 ---
@@ -478,6 +479,9 @@ scripts/
   test_training_local.py          ← Test training locally (no AWS needed)
   sagemaker_training_job.py       ← Optional: run training via SageMaker directly
   update_requirements.sh          ← Regenerate container requirements.txt from lockfile
+  undeploy/
+    undeploy.py                   ← Delete all demo resources (reverse of setup)
+    scan_regions.py               ← Scan regions for leftover demo resources
 ```
 
 ---
@@ -551,6 +555,69 @@ This demo uses synthetic data with an intentionally embedded propensity signal f
 - **Data access** — Access to source and output S3 buckets is controlled via scoped IAM policies. Only the designated Clean Rooms roles can read source data or write inference results.
 - **Data lineage** — The training pipeline is fully reproducible: synthetic data generation → S3 upload → AWS Glue catalog → AWS Clean Rooms join → container training → inference output.
 
+
+---
+
+## Undeploy Resources
+
+Two scripts in `scripts/undeploy/` help you find and remove all AWS resources created by this demo.
+
+### Step 1: Scan for Resources Across Regions
+
+If you deployed the demo to multiple regions (or aren't sure which region was used), scan first:
+
+```bash
+python scripts/undeploy/scan_regions.py
+```
+
+This checks all AWS Clean Rooms-supported regions for active `cleanrooms-ml-demo` collaborations and reports which regions have resources. Example output:
+
+```
+  us-east-1: clean
+  eu-west-2: FOUND 1 collaboration(s)
+    - cleanrooms-ml-demo-collaboration (id=c2fdff62-...)
+  eu-north-1: FOUND 1 collaboration(s)
+    - cleanrooms-ml-demo-collaboration (id=e1dd3238-...)
+```
+
+### Step 2: Undeploy Resources
+
+Run the undeploy script for each region that has resources. Set `AWS_REGION` to target the correct region:
+
+```bash
+# Undeploy from the region configured in config.py
+python scripts/undeploy/undeploy.py
+
+# Undeploy from a specific region (override config.py)
+AWS_REGION=eu-west-2 python scripts/undeploy/undeploy.py
+```
+
+The script prompts for confirmation before deleting. Use `--dry-run` to preview what would be deleted without making changes:
+
+```bash
+python scripts/undeploy/undeploy.py --dry-run
+```
+
+Use `--skip-confirmation` for non-interactive execution (e.g., CI pipelines):
+
+```bash
+python scripts/undeploy/undeploy.py --skip-confirmation
+```
+
+### What Gets Deleted
+
+The undeploy script removes all resources in reverse dependency order:
+
+1. **Clean Rooms ML** — inference jobs, trained models, ML input channels, algorithm associations, configured model algorithms
+2. **Clean Rooms** — ML configuration, table association analysis rules, table associations, configured tables, analysis rules, collaboration
+3. **AWS Glue** — tables and database (`cleanrooms_ml_demo`)
+4. **Lake Formation** — permission grants for the data provider role
+5. **Amazon S3** — source and output buckets (empties all objects and versions first)
+6. **Amazon ECR** — training and inference container repositories (including all images)
+7. **IAM** — all demo roles (`data-provider`, `model-provider`, `ml-config`, `query-runner`, `codebuild`, `sagemaker`)
+8. **CodeBuild** — build project and associated CloudWatch log groups
+
+> **Note:** IAM roles are global (not region-scoped), so they only need to be deleted once regardless of how many regions were used. The script handles this gracefully — if a role was already deleted by a previous region's undeploy run, it skips it.
 
 ---
 

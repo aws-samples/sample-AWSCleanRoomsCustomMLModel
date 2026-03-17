@@ -4,6 +4,8 @@
 
 Self-contained, reusable demo for **Customer Propensity Scoring** using AWS Clean Rooms ML with custom training and inference containers.
 
+This repo is a sample, to quickly get started with AWS Clean Rooms Custom ML models analysis; it's not meant for production usage AS-IS.
+
 ---
 
 ## Table of Contents

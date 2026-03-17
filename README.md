@@ -453,6 +453,8 @@ The model is evaluated on a held-out 20% test set during training. Typical metri
 
 ```
 config.py                          ← SET YOUR ACCOUNT + REGION HERE
+pyproject.toml                    ← Dependency declarations (loose constraints)
+uv.lock                           ← Pinned lockfile (exact versions + hashes)
 README.md                         ← This file
 buildspec.yml                     ← CodeBuild spec (reads env vars from codebuild_containers.py)
 data/
@@ -460,9 +462,11 @@ data/
 containers/
   training/
     Dockerfile                    ← Parameterized base image via ARG
+    requirements.txt              ← Pinned deps exported from uv.lock
     train.py                      ← GradientBoosting training script
   inference/
     Dockerfile                    ← Parameterized base image via ARG
+    requirements.txt              ← Pinned deps exported from uv.lock
     serve.py                      ← HTTP server (/ping + /invocations)
     inference_handler.py          ← Model loading + prediction logic
 scripts/
@@ -473,7 +477,34 @@ scripts/
   run_cleanrooms_ml.py            ← Create channels, train model, run inference
   test_training_local.py          ← Test training locally (no AWS needed)
   sagemaker_training_job.py       ← Optional: run training via SageMaker directly
+  update_requirements.sh          ← Regenerate container requirements.txt from lockfile
 ```
+
+---
+
+## Dependency Management
+
+Container dependencies are pinned via [`uv`](https://docs.astral.sh/uv/) for reproducible, hash-verified builds.
+
+### Adding or Updating a Dependency
+
+1. Edit `pyproject.toml` (loose constraints live here)
+2. Run `uv lock` to regenerate `uv.lock` with exact versions + hashes
+3. Run `bash scripts/update_requirements.sh` to export pinned deps to both container `requirements.txt` files
+4. Commit all three changed files (`pyproject.toml`, `uv.lock`, `containers/*/requirements.txt`)
+
+### Local Development
+
+```bash
+uv sync          # creates .venv and installs all deps (including dev group)
+```
+
+### CI Checks (CodeBuild)
+
+The build pipeline enforces two guards before building containers:
+
+- **Lockfile freshness** — `uv lock --check` fails if `uv.lock` is out of sync with `pyproject.toml`
+- **Requirements drift** — `uv export` output is diffed against the committed `requirements.txt` files; any mismatch fails the build
 
 ---
 

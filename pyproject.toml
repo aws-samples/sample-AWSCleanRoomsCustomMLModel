@@ -1,0 +1,13 @@
+[project]
+name = "aws-cleanrooms-ml-custom-model-demo"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
+    "joblib>=1.3",
+    "numpy>=1.26",
+]
+
+[dependency-groups]
+dev = ["boto3"]

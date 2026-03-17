@@ -10,7 +10,8 @@ FROM ${SAGEMAKER_REGISTRY}.dkr.ecr.${AWS_REGION}.amazonaws.com/pytorch-inference
 ENV PYTHONUNBUFFERED=1
 
 # Install dependencies
-RUN pip install --no-cache-dir pandas scikit-learn joblib
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY serve.py /opt/ml/code/serve.py
 COPY inference_handler.py /opt/ml/code/inference_handler.py

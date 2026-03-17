@@ -39,9 +39,14 @@ scripts/trust-policy.json
 # Run ID (auto-generated per demo run)
 .run_id
 
-# Scan reports (local records)
+# Scan reports and security scan artifacts
 git-secrets-scan-report.txt
 repolinter-report.md
+scan-report*.json
+ash-output/
+
+# Working docs
+uv-lockfile-tasks.md
 
 # Kiro
 .kiro/

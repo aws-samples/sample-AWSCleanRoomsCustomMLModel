@@ -17,7 +17,8 @@ ENV PATH="/opt/ml/code:${PATH}"
 ENV SAGEMAKER_SUBMIT_DIRECTORY /opt/ml/code
 
 # Install dependencies
-RUN pip install --no-cache-dir pandas scikit-learn joblib
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Copy training script
 COPY train.py /opt/ml/code/train.py

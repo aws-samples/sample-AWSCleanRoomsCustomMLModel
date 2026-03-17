@@ -93,6 +93,8 @@ def upload_source():
                 arcname = os.path.relpath(filepath, project_root)
                 zf.write(filepath, arcname)
         zf.write(os.path.join(project_root, "buildspec.yml"), "buildspec.yml")
+        zf.write(os.path.join(project_root, "pyproject.toml"), "pyproject.toml")
+        zf.write(os.path.join(project_root, "uv.lock"), "uv.lock")
     buf.seek(0)
     s3.put_object(Bucket=BUCKET, Key=SOURCE_KEY, Body=buf.read())
     log(f"Uploaded source to s3://{BUCKET}/{SOURCE_KEY}")

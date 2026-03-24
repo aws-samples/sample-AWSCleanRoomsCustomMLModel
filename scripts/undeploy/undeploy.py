@@ -28,6 +28,7 @@ s3 = session.client("s3")
 ecr = session.client("ecr")
 cb = session.client("codebuild")
 logs = session.client("logs")
+qs = session.client("quicksight")
 
 DRY_RUN = False
 
@@ -211,9 +212,14 @@ def delete_cleanrooms():
 
 # ═══ 3. GLUE DATA CATALOG ═══
 def delete_glue():
-    """Delete Glue tables and database."""
+    """Delete Glue tables (source + dashboard) and database."""
     print("\n[3/8] Deleting Glue Data Catalog...")
+    # Source tables (created by setup_cleanrooms.py)
     for tbl in [ADVERTISER_TABLE, RETAILER_TABLE]:
+        log(f"Deleting table: {GLUE_DB}.{tbl}")
+        safe(glue.delete_table, DatabaseName=GLUE_DB, Name=tbl)
+    # Dashboard tables (created by create_dashboard.py — may not exist)
+    for tbl in ["inference_output"]:
         log(f"Deleting table: {GLUE_DB}.{tbl}")
         safe(glue.delete_table, DatabaseName=GLUE_DB, Name=tbl)
     log(f"Deleting database: {GLUE_DB}")
@@ -332,6 +338,50 @@ def delete_codebuild():
             log(f"  Error cleaning log groups with prefix {prefix}: {e}")
 
 
+# ═══ 9. QUICKSIGHT RESOURCES (optional — only if create_dashboard.py was run) ═══
+def delete_quicksight():
+    """Delete QuickSight dashboard, analysis, datasets, and data source.
+    All operations are best-effort — resources may not exist if the dashboard
+    script was never run, so NotFound errors are silently swallowed.
+    QuickSight account subscription itself is NOT deleted (it is account-wide
+    and may be used by other workloads).
+    """
+    print("\n[9/9] Deleting QuickSight dashboard resources (if present)...")
+
+    qs_dashboard_id  = f"{PREFIX}-propensity-dashboard"
+    qs_analysis_id   = f"{PREFIX}-propensity-analysis"
+    qs_datasource_id = f"{PREFIX}-athena-source"
+    qs_dataset_ids   = [
+        f"{PREFIX}-ds-inference",
+    ]
+
+    # Dashboard
+    log(f"Deleting QuickSight dashboard: {qs_dashboard_id}")
+    safe(qs.delete_dashboard, AwsAccountId=AWS_ACCOUNT_ID, DashboardId=qs_dashboard_id)
+
+    # Analysis
+    log(f"Deleting QuickSight analysis: {qs_analysis_id}")
+    safe(qs.delete_analysis,
+         AwsAccountId=AWS_ACCOUNT_ID,
+         AnalysisId=qs_analysis_id,
+         ForceDeleteWithoutRecovery=True)
+
+    # Datasets (must be deleted before data source)
+    for ds_id in qs_dataset_ids:
+        log(f"Deleting QuickSight dataset: {ds_id}")
+        safe(qs.delete_data_set, AwsAccountId=AWS_ACCOUNT_ID, DataSetId=ds_id)
+
+    # Data source
+    log(f"Deleting QuickSight data source: {qs_datasource_id}")
+    safe(qs.delete_data_source, AwsAccountId=AWS_ACCOUNT_ID, DataSourceId=qs_datasource_id)
+
+    # Remove inline policy added to QuickSight service role for S3/Athena/Glue access
+    log("Removing QuickSight S3/Athena/Glue inline policy from service role")
+    safe(iam.delete_role_policy,
+         RoleName="aws-quicksight-service-role-v0",
+         PolicyName="cleanrooms-ml-demo-qs-access")
+
+
 # ═══ MAIN ═══
 def main():
     global DRY_RUN
@@ -378,6 +428,7 @@ def main():
     delete_ecr()
     delete_iam()
     delete_codebuild()
+    delete_quicksight()
 
     print("\n" + "=" * 60)
     if DRY_RUN:

@@ -2,7 +2,11 @@
 
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](https://opensource.org/licenses/MIT-0)
 
-Self-contained, reusable demo for **Customer Propensity Scoring** using AWS Clean Rooms ML with custom training and inference containers.
+Self-contained, reusable, and customizable demo showing how an **advertiser** and a **retailer** can jointly predict which customers are most likely to make a purchase — without either party ever sharing their raw data with the other.
+
+The advertiser contributes **ad engagement data** (impressions, clicks, time spent, device type, campaign) and the retailer contributes **purchase behavior data** (product categories, purchase amounts, site visits, conversion history). AWS Clean Rooms ML joins these datasets inside a secure collaboration, trains a propensity model on the combined signal, and scores every customer — all without exposing either party's underlying records.
+
+The output is a ranked list of customers by purchase propensity, visualized in an Amazon QuickSight dashboard that shows which campaigns, categories, and segments drive the highest conversion intent.
 
 This repo is a sample, to quickly get started with AWS Clean Rooms Custom ML models analysis; it's not meant for production usage AS-IS.
 
@@ -32,11 +36,15 @@ This repo is a sample, to quickly get started with AWS Clean Rooms Custom ML mod
 
 ## Use Case: Customer Propensity Scoring
 
-**Scenario:** An advertiser and a retailer want to collaborate on predicting which customers are most likely to convert (make a purchase) based on combined ad engagement and purchase behavior data. Neither party wants to share their raw data with the other.
+An **advertiser** knows which users engaged with their ads — but not whether those users actually bought anything. A **retailer** knows which users purchased — but not which ads influenced them. Neither party is willing to share their raw customer data with the other.
 
-**Solution:** AWS Clean Rooms ML enables both parties to contribute their data to a secure collaboration. AWS Clean Rooms joins the datasets on a shared key (`user_id`), trains a propensity model on the combined features, and runs inference — all without either party seeing the other's raw data.
+By combining both datasets inside an AWS Clean Rooms collaboration, the model learns from the full picture: ad engagement signals from the advertiser and purchase behavior signals from the retailer. The result is a propensity score for every customer that neither party could have produced alone.
 
-**Business Value:** The advertiser can identify high-propensity users to target with ad campaigns, while the retailer gains insight into which ad-exposed customers are most likely to purchase — enabling better ad spend allocation and personalized marketing.
+**What the advertiser gains:** a ranked list of users to prioritise for ad targeting, based on actual purchase signals — not just clicks.
+
+**What the retailer gains:** insight into which ad-exposed customers are most likely to buy, enabling smarter inventory planning and personalised offers.
+
+**What neither party gives up:** their raw customer data. AWS Clean Rooms enforces that the join happens inside the secure collaboration — no raw records cross the boundary.
 
 ---
 
@@ -51,6 +59,7 @@ This repo is a sample, to quickly get started with AWS Clean Rooms Custom ML mod
 | 3 | Build & Push Containers (CodeBuild) | ~7 min |
 | 4 | Setup Clean Rooms Infrastructure | ~31s |
 | 5 | Train Model & Run Inference | ~34 min |
+| 6 | Create QuickSight Dashboard (optional) | ~3 min |
 | **Total** | **End-to-end** | **~42 min** |
 
 ### Prerequisites
@@ -59,13 +68,16 @@ This repo is a sample, to quickly get started with AWS Clean Rooms Custom ML mod
 - AWS CLI configured with valid credentials
 - AWS account with AWS Clean Rooms ML access enabled
 
+> **Optional — QuickSight Dashboard (Step 6):** If you plan to run `scripts/create_dashboard.py`, your `AWS_REGION` must be a region where Amazon QuickSight is available. QuickSight, Athena, Glue, and S3 must all be in the same region — cross-region Athena connections are not supported by QuickSight. Supported regions include `us-east-1`, `us-east-2`, `us-west-2`, `eu-west-1`, `eu-west-2`, `eu-west-3`, `eu-central-1`, `eu-north-1`, `ap-northeast-1`, `ap-northeast-2`, `ap-southeast-1`, `ap-southeast-2`, `ap-south-1`, `ca-central-1`, and others. See the [full list](https://docs.aws.amazon.com/quicksight/latest/user/regions-qs.html). Also set `QS_NOTIFICATION_EMAIL` in `config.py` to a valid email address — this is used for QuickSight account registration and is validated at script startup.
+
 ### Step 0: Configure Your Account
 
 Edit `config.py` and set your values:
 
 ```python
-AWS_ACCOUNT_ID = "123456789012"   # Your 12-digit AWS account ID
-AWS_REGION     = "eu-north-1"     # Your preferred region
+AWS_ACCOUNT_ID        = "123456789012"        # Your 12-digit AWS account ID
+AWS_REGION            = "eu-north-1"           # Your preferred region
+QS_NOTIFICATION_EMAIL = "your@email.com"       # Optional: only needed for Step 6 (QuickSight)
 ```
 
 All scripts read from this single file — no other hardcoded values to change.
@@ -416,6 +428,14 @@ After successful inference, AWS Clean Rooms ML writes the output to the configur
 |--------|------|-------------|
 | propensity_score | float (0–1) | Predicted probability of conversion |
 | predicted_converter | int (0/1) | Binary prediction: 1 = likely converter |
+| ad_campaign_id | string | Ad campaign the record belongs to |
+| device_type | string | Device type (mobile, desktop, tablet, smart_tv) |
+| product_category | string | Product category browsed/purchased |
+| purchase_amount | float | Total purchase amount |
+| impressions | int | Number of ad impressions |
+| clicks | int | Number of ad clicks |
+
+> **Note:** `user_id` is never present in the output — it is the Clean Rooms join key and is excluded from the ML input channel by design. The passthrough contextual columns (`ad_campaign_id`, `device_type`, etc.) come from the pre-joined data already approved for the inference channel and are used to power the QuickSight dashboard segmentation.
 
 Example output rows:
 
@@ -478,6 +498,7 @@ scripts/
   build_and_push.py               ← Build containers via local Docker
   setup_cleanrooms.py             ← Create Glue, IAM, collaboration, ML config
   run_cleanrooms_ml.py            ← Create channels, train model, run inference
+  create_dashboard.py             ← Optional: create QuickSight dashboard (Step 6)
   test_training_local.py          ← Test training locally (no AWS needed)
   sagemaker_training_job.py       ← Optional: run training via SageMaker directly
   update_requirements.sh          ← Regenerate container requirements.txt from lockfile
@@ -612,12 +633,13 @@ The undeploy script removes all resources in reverse dependency order:
 
 1. **Clean Rooms ML** — inference jobs, trained models, ML input channels, algorithm associations, configured model algorithms
 2. **Clean Rooms** — ML configuration, table association analysis rules, table associations, configured tables, analysis rules, collaboration
-3. **AWS Glue** — tables and database (`cleanrooms_ml_demo`)
+3. **AWS Glue** — tables and database (`cleanrooms_ml_demo`), including dashboard tables (`inference_output`, `model_metrics`, `feature_importance`) if `create_dashboard.py` was run
 4. **Lake Formation** — permission grants for the data provider role
-5. **Amazon S3** — source and output buckets (empties all objects and versions first)
+5. **Amazon S3** — source and output buckets (empties all objects and versions first, including `dashboard-data/` CSVs)
 6. **Amazon ECR** — training and inference container repositories (including all images)
 7. **IAM** — all demo roles (`data-provider`, `model-provider`, `ml-config`, `query-runner`, `codebuild`, `sagemaker`)
 8. **CodeBuild** — build project and associated CloudWatch log groups
+9. **Amazon QuickSight** — dashboard, analysis, SPICE datasets, and Athena data source (if `create_dashboard.py` was run). The QuickSight account subscription itself is **not** deleted as it is account-wide.
 
 > **Note:** IAM roles are global (not region-scoped), so they only need to be deleted once regardless of how many regions were used. The script handles this gracefully — if a role was already deleted by a previous region's undeploy run, it skips it.
 

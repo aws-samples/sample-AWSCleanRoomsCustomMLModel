@@ -4,6 +4,17 @@
 """
 Inference handler for Customer Propensity Scoring model.
 Compatible with: local, SageMaker Batch Transform, Clean Rooms ML.
+
+Output columns:
+  - propensity_score      float (0-1)
+  - predicted_converter   int (0/1)
+  - ad_campaign_id        str   ─┐
+  - device_type           str    │  passthrough contextual columns
+  - product_category      str    │  (present in Clean Rooms pre-joined input,
+  - purchase_amount       float  │   no raw user identifiers re-introduced)
+  - impressions           int    │
+  - clicks                int   ─┘
+  - user_id               str   (only when present in input, e.g. local/SageMaker mode)
 """
 
 import os, json, logging, io
@@ -122,8 +133,21 @@ def predict(input_data, content_type="text/csv"):
         "propensity_score": np.round(probabilities, 4),
         "predicted_converter": predictions.astype(int),
     })
+
+    # Pass through contextual columns for dashboard segmentation.
+    # These come from the Clean Rooms pre-joined input — no raw user
+    # identifiers are re-introduced. user_id is only present in
+    # local/SageMaker mode (never in the Clean Rooms execution path).
+    PASSTHROUGH_COLS = [
+        "ad_campaign_id", "device_type", "product_category",
+        "purchase_amount", "impressions", "clicks",
+    ]
+    for col in PASSTHROUGH_COLS:
+        if col in df.columns:
+            result[col] = df[col].values
+
     if user_ids is not None:
         result.insert(0, "user_id", user_ids.values)
 
-    logger.info(f"Output shape: {result.shape}")
+    logger.info(f"Output shape: {result.shape}, columns: {list(result.columns)}")
     return result.to_csv(index=False)

@@ -34,6 +34,26 @@ CAMPAIGNS = ["camp_summer_sale", "camp_back_to_school", "camp_holiday", "camp_sp
 DEVICES = ["mobile", "desktop", "tablet", "smart_tv"]
 CATEGORIES = ["electronics", "clothing", "home_garden", "sports", "beauty", "grocery", "toys"]
 
+# Campaign effectiveness multipliers — drives visible variation in avg propensity by campaign
+CAMPAIGN_PROPENSITY_BOOST = {
+    "camp_holiday":        0.18,
+    "camp_summer_sale":    0.10,
+    "camp_back_to_school": 0.04,
+    "camp_spring":        -0.05,
+    "camp_clearance":     -0.14,
+}
+
+# Category affinity multipliers — drives visible variation in avg propensity by category
+CATEGORY_PROPENSITY_BOOST = {
+    "electronics":  0.16,
+    "sports":       0.08,
+    "home_garden":  0.03,
+    "clothing":    -0.02,
+    "toys":        -0.07,
+    "grocery":     -0.12,
+    "beauty":      -0.18,
+}
+
 BASE_DATE = datetime(2025, 1, 1)
 
 
@@ -53,13 +73,14 @@ def generate_advertiser_data():
         propensity = max(0.05, min(0.95, propensity))
 
         for campaign in random.sample(CAMPAIGNS, num_campaigns):
-            # Weaker propensity signal: more baseline randomness, less propensity-driven
-            impressions = max(1, int(random.randint(5, 40) + 10 * propensity))
+            # Apply campaign-level propensity boost so charts show meaningful variation
+            campaign_propensity = max(0.05, min(0.95, propensity + CAMPAIGN_PROPENSITY_BOOST[campaign]))
+            impressions = max(1, int(random.randint(5, 40) + 10 * campaign_propensity))
             device = random.choice(DEVICES)
             base_ctr = {"mobile": 0.08, "desktop": 0.05, "tablet": 0.06, "smart_tv": 0.03}[device]
-            ctr = base_ctr * (0.5 + 1.0 * propensity) * random.uniform(0.6, 1.5)
+            ctr = base_ctr * (0.5 + 1.0 * campaign_propensity) * random.uniform(0.6, 1.5)
             clicks = max(0, int(impressions * ctr))
-            time_per_click = random.uniform(5, 30) * (0.5 + 1.0 * propensity)
+            time_per_click = random.uniform(5, 30) * (0.5 + 1.0 * campaign_propensity)
             time_spent = round(clicks * time_per_click, 1) if clicks > 0 else 0
             event_date = random_date(BASE_DATE, BASE_DATE + timedelta(days=180))
 
@@ -95,7 +116,9 @@ def generate_retailer_data():
 
         num_categories = random.randint(1, 4)
         for category in random.sample(CATEGORIES, num_categories):
-            site_visits = max(1, int(random.randint(3, 12) + 8 * base_propensity))
+            # Apply category-level propensity boost so charts show meaningful variation
+            cat_propensity = max(0.05, min(0.95, base_propensity + CATEGORY_PROPENSITY_BOOST[category]))
+            site_visits = max(1, int(random.randint(3, 12) + 8 * cat_propensity))
 
             avg_price = {"electronics": 150, "clothing": 45, "home_garden": 65,
                          "sports": 55, "beauty": 30, "grocery": 25, "toys": 35}[category]

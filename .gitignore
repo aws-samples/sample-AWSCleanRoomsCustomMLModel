@@ -50,3 +50,9 @@ uv-lockfile-tasks.md
 
 # Kiro
 .kiro/
+
+# Local test root directory
+local_test/
+
+# Working docs
+DASHBOARD_PROPOSAL.md

@@ -184,15 +184,35 @@ This orchestrates the full ML pipeline:
 
 **Output artifacts:** Trained model (ACTIVE), inference results CSV at `s3://cleanrooms-ml-output-<ACCOUNT_ID>/cleanrooms-ml-output/`
 
-### Step 6: Review Results
+### Step 6: Create QuickSight Dashboard (Optional)
 
-Download the inference output from S3 and review the propensity scores:
+**Script:** `scripts/create_dashboard.py`
 
 ```bash
-aws s3 cp s3://cleanrooms-ml-output-<ACCOUNT_ID>-<RUN_ID>/cleanrooms-ml-output/ ./results/ --recursive --region <REGION>
+python scripts/create_dashboard.py
 ```
 
-Each record gets a `propensity_score` (0–1) and a `predicted_converter` (0/1) flag.
+This creates a fully automated Amazon QuickSight dashboard on top of the inference output. The script is idempotent — safe to re-run, it will update existing resources in place.
+
+What it does:
+1. Registers the inference output CSV as an AWS Glue table so Athena can query it
+2. Creates an Athena data source in QuickSight
+3. Creates a QuickSight dataset with derived fields (`propensity_segment`, `score_decile`, `revenue_impact`)
+4. Creates and publishes a 4-sheet dashboard:
+   - **Score Distribution** — histogram by decile, segment donut, lift table, converters vs non-converters
+   - **Campaign & Channel** — avg propensity by campaign, device type, product category, scatter plot
+   - **Segment Deep Dive** — segment summary table, top-scoring records, conversion rate cross-tab
+   - **Business Impact** — converters captured by decile, revenue impact by segment, category × campaign heatmap
+
+**Output:** Dashboard URL printed at the end, e.g.:
+```
+https://eu-west-2.quicksight.aws.amazon.com/sn/dashboards/cleanrooms-ml-demo-propensity-dashboard
+```
+
+> **Note:** To download the raw inference output from S3 instead:
+> ```bash
+> aws s3 cp s3://cleanrooms-ml-output-<ACCOUNT_ID>-<RUN_ID>/cleanrooms-ml-output/ ./results/ --recursive --region <REGION>
+> ```
 
 ---
 
@@ -248,7 +268,13 @@ flowchart TB
     end
 
     subgraph S3_Output["Amazon S3  Results"]
-        OUT["propensity_score\npredicted_converter"]
+        OUT["propensity_score\npredicted_converter\n+ contextual columns"]
+    end
+
+    subgraph Dashboard["Amazon QuickSight  Dashboard"]
+        ATH["AWS Glue + Athena\n(inference_output table)"]
+        QS["4-Sheet Dashboard\nScore Distribution · Campaign & Channel\nSegment Deep Dive · Business Impact"]
+        ATH --> QS
     end
 
     A --> GA
@@ -258,6 +284,7 @@ flowchart TB
     TI -.->|"pulled by"| TJ
     II -.->|"pulled by"| IJ
     IJ --> OUT
+    OUT --> ATH
 ```
 
 ---

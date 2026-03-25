@@ -1,4 +1,4 @@
-# Predict Purchase Intent from Advertiser Ad Engagement and Retailer Purchase Data using AWS Clean Rooms ML
+# Predict Purchase Intent from Advertiser Ad Engagement data and Retailer Purchase Data using AWS Clean Rooms ML
 
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](https://opensource.org/licenses/MIT-0)
 

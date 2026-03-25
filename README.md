@@ -59,7 +59,7 @@ By combining both datasets inside an AWS Clean Rooms collaboration, the model le
 | 3 | Build & Push Containers (CodeBuild) | ~7 min |
 | 4 | Setup Clean Rooms Infrastructure | ~31s |
 | 5 | Train Model & Run Inference | ~34 min |
-| 6 | Create QuickSight Dashboard (optional) | ~3 min |
+| 6 | Create QuickSight Dashboard | ~3 min |
 | **Total** | **End-to-end** | **~42 min** |
 
 ### Prerequisites
@@ -184,7 +184,7 @@ This orchestrates the full ML pipeline:
 
 **Output artifacts:** Trained model (ACTIVE), inference results CSV at `s3://cleanrooms-ml-output-<ACCOUNT_ID>/cleanrooms-ml-output/`
 
-### Step 6: Create QuickSight Dashboard (Optional)
+### Step 6: Create QuickSight Dashboard
 
 **Script:** `scripts/create_dashboard.py`
 
@@ -208,6 +208,19 @@ What it does:
 ```
 https://eu-west-2.quicksight.aws.amazon.com/sn/dashboards/cleanrooms-ml-demo-propensity-dashboard
 ```
+
+#### Dashboard Screenshots
+
+**Score Distribution**
+![Score Distribution](docs/dashboard-score-distribution.png)
+
+**Campaign & Channel**
+![Campaign & Channel](docs/dashboard-campaign-channel.png)
+
+**Business Impact**
+![Business Impact](docs/dashboard-business-impact.png)
+
+![Business Impact Heatmap](docs/dashboard-business-impact-heatmap.png)
 
 > **Note:** To download the raw inference output from S3 instead:
 > ```bash

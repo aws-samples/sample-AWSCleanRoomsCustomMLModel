@@ -2,13 +2,13 @@
 
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](https://opensource.org/licenses/MIT-0)
 
-Self-contained, reusable, and customizable demo showing how an **advertiser** and a **retailer** can jointly predict which customers are most likely to make a purchase — without either party ever sharing their raw data with the other.
+This AWS Sample shows how an **advertiser** and a **retailer** can analyze their collective dataset to understand the customer overlap of their dataset and then apply different kind of analysis, from simple SQL code to advanced Machine Leaning (ML) models, to predict which customers are most likely to make a purchase. All this is done without either party ever accessing other party data or having to move or copy their data.
 
-The advertiser contributes **ad engagement data** (impressions, clicks, time spent, device type, campaign) and the retailer contributes **purchase behavior data** (product categories, purchase amounts, site visits, conversion history). AWS Clean Rooms ML joins these datasets inside a secure collaboration, trains a propensity model on the combined signal, and scores every customer — all without exposing either party's underlying records.
+The advertiser contributes **ad engagement data** (impressions, clicks, time spent, device type, campaign) and the retailer contributes **purchase behavior data** (product categories, purchase amounts, site visits, conversion history). AWS Clean Rooms ML joins these datasets inside a secure and privacy-preserving collaboration, trains a propensity ML model on the combined signal, and scores every shared customer.
 
-The output is a ranked list of customers by purchase propensity, visualized in an Amazon QuickSight dashboard that shows which campaigns, categories, and segments drive the highest conversion intent.
+The output is a ranked list of customers by purchase propensity, visualized in an Amazon QuickSight dashboard that shows which campaigns, categories, and segments drive the highest conversion intent. Sample dashboards images are shown below in this document.
 
-This repo is a sample, to quickly get started with AWS Clean Rooms Custom ML models analysis; it's not meant for production usage AS-IS.
+This repo is an AWS sample, meant to quickly get started with AWS Clean Rooms Custom ML models analysis and evaluate the overall workflow and capabilities provided; it's not meant for production usage AS-IS.
 
 ---
 
